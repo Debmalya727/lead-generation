@@ -1,0 +1,3 @@
+"""
+OpenAI native API adapter.
+"""

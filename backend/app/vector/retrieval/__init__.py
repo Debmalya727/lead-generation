@@ -1,0 +1,3 @@
+"""
+Nearest-neighbor query interfaces.
+"""

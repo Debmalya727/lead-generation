@@ -1,0 +1,3 @@
+"""
+Prometheus/OpenTelemetry statistics collection.
+"""

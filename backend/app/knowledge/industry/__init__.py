@@ -1,0 +1,3 @@
+"""
+Industry-specific keyword patterns.
+"""

@@ -1,0 +1,3 @@
+"""
+Custom API exception classes.
+"""
