@@ -1,15 +1,16 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.database.mongodb.collections.user import User
 from app.database.mongodb.repositories.user_repository import UserRepository
 from app.modules.auth.auth_module import AuthModule
 from app.modules.users.users_module import UsersModule
 from app.security.jwt import decode_token
 
-# Configure OAuth2 password bearer flow token reader
-reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
-)
+# HTTPBearer extracts the raw JWT from the Authorization: Bearer <token> header.
+# This renders a clean single-field "Bearer token" input in Swagger UI instead
+# of the full OAuth2 Password Flow form (which incorrectly shows client_id /
+# client_secret fields that this API does not implement).
+reusable_oauth2 = HTTPBearer()
 
 
 def get_user_repository() -> UserRepository:
@@ -32,10 +33,11 @@ def get_auth_module(
 
 
 async def get_current_user(
-    token: str = Depends(reusable_oauth2),
+    credentials: HTTPAuthorizationCredentials = Depends(reusable_oauth2),
     user_repo: UserRepository = Depends(get_user_repository)
 ) -> User:
     """Dependency validator verifying signed access token and resolving active User."""
+    token = credentials.credentials
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(
