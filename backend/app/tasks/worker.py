@@ -35,3 +35,7 @@ import app.tasks.discovery_tasks
 import app.tasks.intelligence_tasks
 import app.tasks.scoring_tasks
 import app.tasks.outreach_tasks
+import app.tasks.sales_intelligence_tasks
+import app.tasks.research_tasks
+import app.tasks.vector_tasks
+import app.agents.tasks.agent_tasks

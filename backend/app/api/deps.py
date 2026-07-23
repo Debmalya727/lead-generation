@@ -209,3 +209,97 @@ def get_analytics_module(
     event_repo: EmailEventRepository = Depends(get_event_repository),
 ) -> AnalyticsModule:
     return AnalyticsModule(analytics_repo, event_repo)
+
+
+from app.database.mongodb.repositories.sales_intelligence_repository import SalesIntelligenceRepository
+from app.modules.sales_intelligence.sales_intelligence_module import SalesIntelligenceModule
+
+
+def get_sales_intelligence_repository() -> SalesIntelligenceRepository:
+    return SalesIntelligenceRepository()
+
+
+def get_sales_intelligence_module(
+    sales_intel_repo: SalesIntelligenceRepository = Depends(get_sales_intelligence_repository),
+    lead_repo: LeadRepository = Depends(get_lead_repository),
+) -> SalesIntelligenceModule:
+    return SalesIntelligenceModule(sales_intel_repo, lead_repo)
+
+
+from app.database.mongodb.repositories.research_repository import ResearchRepository
+from app.database.mongodb.repositories.intelligence_repository import IntelligenceRepository
+from app.modules.research.research_module import ResearchModule
+
+
+def get_research_repository() -> ResearchRepository:
+    return ResearchRepository()
+
+
+def get_research_module(
+    research_repo: ResearchRepository = Depends(get_research_repository),
+    lead_repo: LeadRepository = Depends(get_lead_repository),
+    company_intel_repo: IntelligenceRepository = Depends(get_intelligence_repository),
+) -> ResearchModule:
+    return ResearchModule(research_repo, lead_repo, company_intel_repo)
+
+
+from app.vector.services.vector_service import VectorService
+
+
+def get_vector_service(
+    lead_repo: LeadRepository = Depends(get_lead_repository),
+    intel_repo: IntelligenceRepository = Depends(get_intelligence_repository),
+    scoring_repo: ScoringRepository = Depends(get_scoring_repository),
+    sales_intel_repo: SalesIntelligenceRepository = Depends(get_sales_intelligence_repository),
+    research_repo: ResearchRepository = Depends(get_research_repository),
+    campaign_repo: CampaignRepository = Depends(get_campaign_repository),
+    template_repo: EmailTemplateRepository = Depends(get_template_repository),
+) -> VectorService:
+    return VectorService(
+        lead_repo=lead_repo,
+        intel_repo=intel_repo,
+        scoring_repo=scoring_repo,
+        sales_intel_repo=sales_intel_repo,
+        research_repo=research_repo,
+        campaign_repo=campaign_repo,
+        template_repo=template_repo,
+    )
+
+
+from app.database.mongodb.repositories.agent_repository import AgentRepository
+from app.agents.services.agent_service import AgentService
+from app.agents.services.collaboration_service import CollaborationService
+from app.agents.services.workflow_service import WorkflowService
+from app.conversation.services.conversation_service import ConversationService
+from app.platform.services.platform_service import PlatformService
+
+
+def get_agent_repository() -> AgentRepository:
+    return AgentRepository()
+
+
+def get_agent_service(
+    agent_repo: AgentRepository = Depends(get_agent_repository),
+) -> AgentService:
+    return AgentService(agent_repo=agent_repo)
+
+
+def get_collaboration_service() -> CollaborationService:
+    return CollaborationService()
+
+
+def get_workflow_service() -> WorkflowService:
+    return WorkflowService()
+
+
+def get_conversation_service() -> ConversationService:
+    return ConversationService()
+
+
+def get_platform_service() -> PlatformService:
+    return PlatformService()
+
+
+
+
+

@@ -14,34 +14,32 @@ from app.ai.providers.base_llm import BaseLLMProvider
 logger = logging.getLogger("backend.ai.factory")
 
 
+class AIGatewayLLMProvider(BaseLLMProvider):
+    """LLM provider wrapper routing all requests through the central AI Gateway."""
+
+    def __init__(self, provider: str, model: str):
+        self.provider = provider
+        self.model = model
+
+    async def complete(self, prompt: str, system_prompt: str = "") -> str:
+        from app.ai.gateway.gateway import ai_gateway
+        res = await ai_gateway.generate_completion(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            provider=self.provider,
+            model=self.model,
+        )
+        return res["response_text"]
+
+
 def get_llm_provider() -> BaseLLMProvider:
     """
     Factory function returning the configured LLM provider instance.
-    Falls back to MockLLMProvider if no API key is set.
+    All calls route through the unified AIGateway.
     """
-    provider_name = os.getenv("LLM_PROVIDER", "openai").lower().strip()
-    api_key = os.getenv("LLM_API_KEY", "").strip()
-    model = os.getenv("LLM_MODEL", "gpt-4o-mini").strip()
-    base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1").strip()
+    provider_name = os.getenv("LLM_PROVIDER", "gemini").lower().strip()
+    model = os.getenv("LLM_MODEL", "gemini-1.5-flash").strip()
+    
+    logger.info(f"Factory routing get_llm_provider() via AIGateway: provider={provider_name}, model={model}")
+    return AIGatewayLLMProvider(provider=provider_name, model=model)
 
-    # Fall back to mock if no API key provided
-    if not api_key:
-        logger.warning(
-            "LLM_API_KEY is not set. Using MockLLMProvider. "
-            "Set LLM_API_KEY environment variable for real AI extraction."
-        )
-        from app.ai.providers.mock.mock_provider import MockLLMProvider
-        return MockLLMProvider()
-
-    if provider_name in ("openai", "openrouter"):
-        from app.ai.providers.openai.openai_provider import OpenAIProvider
-        # OpenRouter uses openai-compatible API but with its own base URL
-        if provider_name == "openrouter" and base_url == "https://api.openai.com/v1":
-            base_url = "https://openrouter.ai/api/v1"
-        logger.info(f"Using OpenAIProvider (provider_name={provider_name}, model={model})")
-        return OpenAIProvider(api_key=api_key, model=model, base_url=base_url)
-
-    # Default fallback
-    logger.warning(f"Unknown LLM_PROVIDER='{provider_name}'. Falling back to MockLLMProvider.")
-    from app.ai.providers.mock.mock_provider import MockLLMProvider
-    return MockLLMProvider()
