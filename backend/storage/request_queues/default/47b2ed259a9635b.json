@@ -1,0 +1,19 @@
+{
+  "unique_key": "https://www.google.com/searchviewer/42?cs=0&cvd=clw_eickjeicijigehkif9lx29ipeqonl2cvmtfiynjrehznchgaogmi8a0%3d&ebb=1&ei=yg9qap2jb7ixhvcpuie3ias&fo_m=mfohqo559jfvmuozjvpjpl1ymfz3binywbdumfaxtpp5kxh-&fo_s=oa,soe&foub=mcpp&gei=yg9qap2jb7ixhvcpuie3ias&gl=in&hl=en-in&opi=79508299",
+  "url": "https://www.google.com/searchviewer/42?cvd=CLw_EicKJeICIjIgEhkiF9LX29IPEQoNL2cvMTFiYnJreHZnchgAOgMI8A0%3D&hl=en-IN&gl=in&fo_m=MfohQo559jFvMUOzJVpjPL1YMfZ3bInYwBDuMfaXTPp5KXh-&utm_source=tactile&gei=Yg9qap2JB7iXhvcPuIe3iAs&ei=Yg9qap2JB7iXhvcPuIe3iAs&fo_s=OA,SOE&opi=79508299&ebb=1&cs=0&foub=mcpp",
+  "method": "GET",
+  "payload": null,
+  "headers": {},
+  "user_data": {
+    "__crawlee": {
+      "enqueueStrategy": "same-hostname",
+      "state": 4,
+      "crawlDepth": 1
+    },
+    "label": "detail"
+  },
+  "retry_count": 0,
+  "no_retry": false,
+  "loaded_url": "https://www.google.com/searchviewer/42?cvd=CLw_EicKJeICIjIgEhkiF9LX29IPEQoNL2cvMTFiYnJreHZnchgAOgMI8A0%3D&hl=en-IN&gl=in&fo_m=MfohQo559jFvMUOzJVpjPL1YMfZ3bInYwBDuMfaXTPp5KXh-&utm_source=tactile&gei=Yg9qap2JB7iXhvcPuIe3iAs&ei=Yg9qap2JB7iXhvcPuIe3iAs&fo_s=OA,SOE&opi=79508299&ebb=1&cs=0&foub=mcpp",
+  "handled_at": "2026-07-29 14:35:00.232316+00:00"
+}

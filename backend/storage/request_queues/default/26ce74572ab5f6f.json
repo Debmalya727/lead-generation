@@ -1,0 +1,19 @@
+{
+  "unique_key": "https://www.google.com/maps/place/the+country+house+cafe/data=!4m7!3m6!1s0x3a02775bf787d60b:0x22b2f746ae373faa!8m2!3d22.5369732!4d88.3512311!16s/g/11cnpk8ypm!19schijc9ah91t3ajorqj83rkb3sii?authuser=0&hl=en&rclk=1",
+  "url": "https://www.google.com/maps/place/The+Country+House+Cafe/data=!4m7!3m6!1s0x3a02775bf787d60b:0x22b2f746ae373faa!8m2!3d22.5369732!4d88.3512311!16s%2Fg%2F11cnpk8ypm!19sChIJC9aH91t3AjoRqj83rkb3siI?authuser=0&hl=en&rclk=1",
+  "method": "GET",
+  "payload": null,
+  "headers": {},
+  "user_data": {
+    "__crawlee": {
+      "enqueueStrategy": "same-hostname",
+      "state": 4,
+      "crawlDepth": 1
+    },
+    "label": "detail"
+  },
+  "retry_count": 0,
+  "no_retry": false,
+  "loaded_url": "https://www.google.com/maps/place/The+Country+House+Cafe/data=!4m7!3m6!1s0x3a02775bf787d60b:0x22b2f746ae373faa!8m2!3d22.5369732!4d88.3512311!16s%2Fg%2F11cnpk8ypm!19sChIJC9aH91t3AjoRqj83rkb3siI?authuser=0&hl=en&rclk=1",
+  "handled_at": "2026-07-29 14:34:41.449453+00:00"
+}

@@ -8,6 +8,8 @@ class DiscoveryStartRequest(BaseModel):
     keyword: str = Field(..., min_length=1, description="Keyword target (e.g. HVAC)")
     location: str = Field(..., min_length=1, description="Location filter (e.g. Chicago)")
     providers: List[str] = Field(..., min_length=1, description="Target directories (google_maps, justdial, etc.)")
+    website_filter: Optional[str] = Field("all", description="Filtering option: all, without_website, with_website")
+    limit: Optional[int] = Field(20, ge=1, le=200, description="Target limit of leads to discover")
 
 
 class DiscoveredLeadResponse(BaseModel):

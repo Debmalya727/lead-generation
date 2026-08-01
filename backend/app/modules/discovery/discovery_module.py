@@ -31,6 +31,8 @@ class DiscoveryModule:
             "keyword": payload.keyword.strip(),
             "location": payload.location.strip(),
             "providers": [p.lower().strip() for p in payload.providers],
+            "website_filter": payload.website_filter or "all",
+            "limit": payload.limit or 20,
             "status": "pending",
             "progress": 0.0,
             "total_results": 0,

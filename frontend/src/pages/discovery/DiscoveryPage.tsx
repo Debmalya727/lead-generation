@@ -10,6 +10,8 @@ export const DiscoveryPage: React.FC = () => {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [selectedProviders, setSelectedProviders] = useState<string[]>(["google_maps"]);
+  const [websiteFilter, setWebsiteFilter] = useState("all");
+  const [limit, setLimit] = useState<number>(20);
 
   // Active scrape job states
   const [activeJob, setActiveJob] = useState<JobStatusResponse | null>(null);
@@ -47,6 +49,8 @@ export const DiscoveryPage: React.FC = () => {
         keyword: keyword.trim(),
         location: location.trim(),
         providers: selectedProviders,
+        website_filter: websiteFilter,
+        limit: Number(limit) || 20,
       });
       setActiveJob(job);
       startPolling(job.id);
@@ -291,6 +295,39 @@ export const DiscoveryPage: React.FC = () => {
                   placeholder="e.g. Chicago, Mumbai"
                   className="w-full px-3 py-2 bg-black/40 border border-glass rounded-lg text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-persian-turquoise transition-all font-mono"
                 />
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
+                  Type of Leads
+                </label>
+                <select
+                  value={websiteFilter}
+                  onChange={(e) => setWebsiteFilter(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-black/40 border border-glass rounded-lg text-xs text-white focus:outline-none focus:border-persian-turquoise transition-all font-mono"
+                >
+                  <option value="all">All Leads (With & Without Website)</option>
+                  <option value="without_website">Without Website Only</option>
+                  <option value="with_website">With Website Only</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
+                  Max Leads to Extract
+                </label>
+                <select
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-black/40 border border-glass rounded-lg text-xs text-white focus:outline-none focus:border-persian-turquoise transition-all font-mono"
+                >
+                  <option value={10}>10 Leads</option>
+                  <option value={20}>20 Leads</option>
+                  <option value={50}>50 Leads</option>
+                  <option value={100}>100 Leads</option>
+                </select>
               </div>
 
               <div className="space-y-2">

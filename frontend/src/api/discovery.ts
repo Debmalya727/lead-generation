@@ -32,7 +32,7 @@ export interface SaveLeadsResponse {
 }
 
 export const discoveryApi = {
-  startDiscovery: async (payload: { keyword: string; location: string; providers: string[] }) => {
+  startDiscovery: async (payload: { keyword: string; location: string; providers: string[]; website_filter: string; limit?: number }) => {
     const response = await axiosClient.post<JobStatusResponse>("/discovery/start", payload);
     return response.data;
   },

@@ -1,0 +1,19 @@
+{
+  "unique_key": "https://www.google.com/maps/place/the+serra+rooftop+cafe/data=!4m7!3m6!1s0x3a027543b4fafd3b:0x5a29fa1d19f17191!8m2!3d22.5733943!4d88.4309795!16s/g/11y1zmsy4g!19schijo_36ten1ajorkxhxgr36kvo?authuser=0&hl=en&rclk=1",
+  "url": "https://www.google.com/maps/place/The+Serra+Rooftop+Cafe/data=!4m7!3m6!1s0x3a027543b4fafd3b:0x5a29fa1d19f17191!8m2!3d22.5733943!4d88.4309795!16s%2Fg%2F11y1zmsy4g!19sChIJO_36tEN1AjoRkXHxGR36KVo?authuser=0&hl=en&rclk=1",
+  "method": "GET",
+  "payload": null,
+  "headers": {},
+  "user_data": {
+    "__crawlee": {
+      "enqueueStrategy": "same-hostname",
+      "state": 4,
+      "crawlDepth": 1
+    },
+    "label": "detail"
+  },
+  "retry_count": 0,
+  "no_retry": false,
+  "loaded_url": "https://www.google.com/maps/place/The+Serra+Rooftop+Cafe/data=!4m7!3m6!1s0x3a027543b4fafd3b:0x5a29fa1d19f17191!8m2!3d22.5733943!4d88.4309795!16s%2Fg%2F11y1zmsy4g!19sChIJO_36tEN1AjoRkXHxGR36KVo?authuser=0&hl=en&rclk=1",
+  "handled_at": "2026-07-29 14:34:46.486473+00:00"
+}

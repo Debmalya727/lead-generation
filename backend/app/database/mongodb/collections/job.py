@@ -21,6 +21,8 @@ class ScrapeJob(Document):
     keyword: str = Field(..., description="Keyword query used for discovery search")
     location: str = Field(..., description="Location query used for search")
     providers: List[str] = Field(..., description="List of providers selected")
+    website_filter: str = Field(default="all", description="website filter setting: all, without_website, with_website")
+    limit: int = Field(default=20, description="Number of leads requested")
     status: str = Field(default="pending", description="pending, running, completed, cancelled, failed")
     progress: float = Field(default=0.0, description="Completion percentage 0.0 - 100.0")
     total_results: int = Field(default=0, description="Total number of results discovered")

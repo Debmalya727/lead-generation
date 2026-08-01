@@ -1,0 +1,19 @@
+{
+  "unique_key": "https://www.google.com/maps/place/out+n+beyond+cafe+&+bistro/data=!4m7!3m6!1s0x3a027578bea5963d:0x25c80e9c5c83321d!8m2!3d22.5905245!4d88.428795!16s/g/11tjy7x7w_!19schijpzalvnh1ajorhtkdxjwoycu?authuser=0&hl=en&rclk=1",
+  "url": "https://www.google.com/maps/place/Out+n+Beyond+Cafe+%26+Bistro/data=!4m7!3m6!1s0x3a027578bea5963d:0x25c80e9c5c83321d!8m2!3d22.5905245!4d88.428795!16s%2Fg%2F11tjy7x7w_!19sChIJPZalvnh1AjoRHTKDXJwOyCU?authuser=0&hl=en&rclk=1",
+  "method": "GET",
+  "payload": null,
+  "headers": {},
+  "user_data": {
+    "__crawlee": {
+      "enqueueStrategy": "same-hostname",
+      "state": 4,
+      "crawlDepth": 1
+    },
+    "label": "detail"
+  },
+  "retry_count": 0,
+  "no_retry": false,
+  "loaded_url": "https://www.google.com/maps/place/Out+n+Beyond+Cafe+%26+Bistro/data=!4m7!3m6!1s0x3a027578bea5963d:0x25c80e9c5c83321d!8m2!3d22.5905245!4d88.428795!16s%2Fg%2F11tjy7x7w_!19sChIJPZalvnh1AjoRHTKDXJwOyCU?authuser=0&hl=en&rclk=1",
+  "handled_at": "2026-07-29 14:34:31.931935+00:00"
+}

@@ -66,9 +66,12 @@ async def async_run_discovery(job_id: str):
         return
 
     # 4. Execute provider tasks concurrently, allowing them to fail independently
+    job_limit = getattr(job, "limit", 20) or 20
+    job_filter = getattr(job, "website_filter", "all") or "all"
+    
     tasks = []
     for prov in provider_instances:
-        tasks.append(run_single_provider(prov, job.keyword, job.location))
+        tasks.append(run_single_provider(prov, job.keyword, job.location, limit=job_limit, website_filter=job_filter))
 
     results_by_provider = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -132,11 +135,11 @@ async def async_run_discovery(job_id: str):
     await DatabaseManager.close()
 
 
-async def run_single_provider(provider, keyword: str, location: str) -> List[dict]:
+async def run_single_provider(provider, keyword: str, location: str, limit: int = 20, website_filter: str = "all") -> List[dict]:
     """Wraps provider run in a try-catch block to satisfy independent failure rules."""
     try:
-        logger.info(f"Running provider discovery: {provider.provider_name}")
-        return await provider.discover(keyword, location, limit=15)
+        logger.info(f"Running provider discovery: {provider.provider_name} (limit={limit}, filter={website_filter})")
+        return await provider.discover(keyword, location, limit=limit, website_filter=website_filter)
     except Exception as e:
         logger.error(f"Error in provider {provider.provider_name}: {str(e)}")
         # Return empty list on failure so other providers proceed
