@@ -20,3 +20,4 @@ beautifulsoup4==4.12.3
 lxml==5.2.2
 openai==1.35.0
 crawlee[playwright]==1.8.3
+ddgs>=0.1.0

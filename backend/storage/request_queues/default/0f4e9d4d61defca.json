@@ -1,6 +1,6 @@
 {
   "unique_key": "https://www.google.com/maps/search/cafe+in+kolkata",
-  "url": "https://www.google.com/maps/search/Cafe+in+Kolkata",
+  "url": "https://www.google.com/maps/search/cafe+in+kolkata",
   "method": "GET",
   "payload": null,
   "headers": {},
@@ -11,6 +11,6 @@
   },
   "retry_count": 0,
   "no_retry": false,
-  "loaded_url": "https://www.google.com/maps/search/Cafe+in+Kolkata",
-  "handled_at": "2026-07-29 14:34:21.221255+00:00"
+  "loaded_url": "https://www.google.com/maps/search/cafe+in+kolkata",
+  "handled_at": "2026-08-01 16:42:53.095743+00:00"
 }

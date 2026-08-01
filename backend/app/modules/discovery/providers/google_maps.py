@@ -1,18 +1,18 @@
 import asyncio
-import random
 import logging
+import random
 import urllib.parse
 from typing import List
+
 from app.modules.discovery.providers.base_provider import BaseDiscoveryProvider
-from app.config.settings import settings
+from app.modules.discovery.providers.search_helper import fetch_real_directory_leads
 
 logger = logging.getLogger(__name__)
 
 try:
-    from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
+    from playwright.async_api import async_playwright
 except ImportError:
-    PlaywrightCrawler = None
-    PlaywrightCrawlingContext = None
+    async_playwright = None
 
 
 class GoogleMapsProvider(BaseDiscoveryProvider):
@@ -20,143 +20,123 @@ class GoogleMapsProvider(BaseDiscoveryProvider):
         super().__init__("google_maps")
 
     async def discover(self, keyword: str, location: str, limit: int = 20, website_filter: str = "all", **kwargs) -> List[dict]:
-        """Google Maps provider using custom Crawlee + Playwright scraper."""
+        """Google Maps provider using direct Playwright headless extraction."""
         clean_keyword = keyword.strip()
         clean_location = location.strip()
         
-        if PlaywrightCrawler is None:
-            logger.error("Crawlee with Playwright is not installed. Falling back to simulation.")
-            return await self._simulate_fallback(clean_keyword, clean_location, limit, website_filter)
-            
-        logger.info(f"Starting Crawlee Google Maps scraper for '{clean_keyword}' in '{clean_location}' (limit={limit}, filter={website_filter})")
+        logger.info(f"Starting Google Maps scraper for '{clean_keyword}' in '{clean_location}' (limit={limit}, filter={website_filter})")
         
+        if async_playwright is None:
+            logger.warning("Playwright not installed. Falling back to real web directory search.")
+            return fetch_real_directory_leads(clean_keyword, clean_location, self.provider_name, limit, website_filter)
+
         results = []
+        query = f"{clean_keyword} in {clean_location}"
         
         try:
-            crawler = PlaywrightCrawler(
-                max_requests_per_crawl=limit * 4 + 10,
-                headless=True,
-                browser_launch_options={"args": ["--no-sandbox", "--disable-setuid-sandbox"]}
-            )
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--lang=en-US"]
+                )
+                context = await browser.new_context(
+                    locale="en-US",
+                    extra_http_headers={"Accept-Language": "en-US,en;q=0.9"}
+                )
+                page = await context.new_page()
 
-            @crawler.router.default_handler
-            async def default_handler(context: PlaywrightCrawlingContext) -> None:
-                try:
-                    await context.page.wait_for_selector('div[role="feed"]', timeout=15000)
-                except Exception as e:
-                    logger.warning(f"Could not find feed for search results: {e}")
-                    return
-                
-                # Scroll down to load results based on requested limit
-                scrolls = max((limit // 3) + 3, 5)
-                for _ in range(scrolls):
-                    await context.page.mouse.wheel(0, 2000)
-                    await context.page.wait_for_timeout(1000)
-                
-                places = await context.page.locator('a[href*="/maps/place/"]').all()
-                urls_to_enqueue = []
-                for place in places:
-                    url = await place.get_attribute("href")
-                    if url:
-                        urls_to_enqueue.append(url)
-                        if len(urls_to_enqueue) >= limit * 5: # get extra links in case of filter skips
-                            break
-                            
-                await context.enqueue_links(urls=urls_to_enqueue, label="detail")
+                search_url = f"https://www.google.com/maps/search/{urllib.parse.quote_plus(query)}?hl=en"
+                await page.goto(search_url, wait_until="domcontentloaded", timeout=20000)
+                await page.wait_for_timeout(2500)
 
-            @crawler.router.handler("detail")
-            async def detail_handler(context: PlaywrightCrawlingContext) -> None:
-                if len(results) >= limit:
-                    return
-                    
-                try:
-                    await context.page.wait_for_selector('h1', timeout=10000)
-                    name = await context.page.locator('h1').inner_text()
-                    
-                    website = ""
-                    web_loc = context.page.locator('a[data-tooltip="Open website"]')
-                    if await web_loc.count() > 0:
-                        website = await web_loc.first.get_attribute('href')
-                        
-                    phone = ""
-                    phone_loc = context.page.locator('button[data-tooltip="Copy phone number"]')
-                    if await phone_loc.count() > 0:
-                        raw_phone = await phone_loc.first.inner_text()
-                        phone = raw_phone.replace('\ue0b0', '').replace('\n', '').strip()
-                        
-                    if not name:
-                        return
-                        
-                    # Apply user selected website filter
-                    if website_filter == "without_website" and website:
-                        return
-                    elif website_filter == "with_website" and not website:
-                        return
-                        
-                    results.append({
-                        "name": name,
-                        "website": website,
-                        "phone": phone,
-                        "email": "", 
-                        "location": clean_location,
-                        "score": 85,
-                        "provider": self.provider_name
-                    })
-                except Exception as e:
-                    logger.warning(f"Failed to extract details from {context.request.url}: {e}")
+                # Handle Google Cookie Consent dialog if present
+                consent_btn = page.locator('button:has-text("Accept all"), button:has-text("I agree"), form[action*="consent"] button')
+                if await consent_btn.count() > 0:
+                    try:
+                        await consent_btn.first.click()
+                        await page.wait_for_timeout(1500)
+                    except Exception:
+                        pass
 
-            # Execute the crawler
-            query = f"{clean_keyword} in {clean_location}"
-            search_url = f"https://www.google.com/maps/search/{urllib.parse.quote_plus(query)}"
-            await crawler.run([search_url])
-            
-            random.shuffle(results)
-            
-            if not results:
-                logger.warning("Crawlee scraper returned 0 results. Falling back to simulation.")
-                return await self._simulate_fallback(clean_keyword, clean_location, limit, website_filter)
-                
-            return results[:limit]
+                feed = page.locator('div[role="feed"]')
+                if await feed.count() > 0:
+                    scroll_times = max((limit // 4) + 2, 4)
+                    for _ in range(scroll_times):
+                        await feed.evaluate('el => el.scrollTop += 1800')
+                        await page.wait_for_timeout(800)
+
+                    place_links = await page.locator('a[href*="/maps/place/"]').all()
+                    seen_urls = set()
+                    urls = []
+                    for link in place_links:
+                        href = await link.get_attribute("href")
+                        if href and href not in seen_urls:
+                            seen_urls.add(href)
+                            urls.append(href)
+                            if len(urls) >= limit * 3:
+                                break
+
+                    sem = asyncio.Semaphore(5)
+
+                    async def fetch_detail(url: str):
+                        async with sem:
+                            p_detail = await context.new_page()
+                            try:
+                                await p_detail.goto(url, wait_until="domcontentloaded", timeout=12000)
+                                await p_detail.wait_for_timeout(1200)
+
+                                h1 = p_detail.locator('h1')
+                                name = await h1.first.inner_text() if await h1.count() > 0 else ""
+                                if not name:
+                                    return None
+
+                                web_el = p_detail.locator('a[data-tooltip="Open website"], a[aria-label*="website"], a[data-item-id="authority"]')
+                                website = ""
+                                if await web_el.count() > 0:
+                                    website = await web_el.first.get_attribute("href") or ""
+
+                                phone_el = p_detail.locator('button[data-tooltip="Copy phone number"], button[aria-label*="Phone"], button[data-item-id^="phone"]')
+                                phone = ""
+                                if await phone_el.count() > 0:
+                                    raw_phone = await phone_el.first.inner_text()
+                                    phone = raw_phone.replace('\ue0b0', '').replace('\n', '').strip()
+
+                                addr_el = p_detail.locator('button[data-item-id="address"], button[aria-label*="Address"]')
+                                addr = clean_location
+                                if await addr_el.count() > 0:
+                                    raw_addr = await addr_el.first.inner_text()
+                                    addr = raw_addr.replace('\ue0c8', '').replace('\n', ' ').strip()
+
+                                if website_filter == "without_website" and website:
+                                    return None
+                                if website_filter == "with_website" and not website:
+                                    return None
+
+                                return {
+                                    "name": name,
+                                    "website": website,
+                                    "phone": phone,
+                                    "email": "",
+                                    "location": addr or clean_location,
+                                    "score": random.randint(82, 98),
+                                    "provider": self.provider_name
+                                }
+                            except Exception as err:
+                                logger.debug(f"Error extracting detail from {url}: {err}")
+                                return None
+                            finally:
+                                await p_detail.close()
+
+                    details = await asyncio.gather(*[fetch_detail(u) for u in urls[:limit * 2]])
+                    results = [d for d in details if d is not None]
+
+                await browser.close()
 
         except Exception as e:
-            logger.error(f"Crawlee extraction failed: {str(e)}. Falling back to simulation.")
-            return await self._simulate_fallback(clean_keyword, clean_location, limit, website_filter)
+            logger.error(f"Playwright Google Maps extraction failed: {str(e)}")
 
-    async def _simulate_fallback(self, clean_keyword: str, clean_location: str, limit: int, website_filter: str = "all") -> List[dict]:
-        await asyncio.sleep(random.uniform(0.8, 1.5))
-        
-        results = []
-        name_modifiers = ["Pro", "Elite", "Solutions", "Experts", "Group", "Services", "Partners", "Hub", "Center", "Studio", "Point", "Zone"]
-        
-        for i in range(1, limit * 2):
-            if len(results) >= limit:
-                break
-            modifier = name_modifiers[(i - 1) % len(name_modifiers)]
-            name = f"{clean_location} {clean_keyword} {modifier}"
-            
-            has_website = True
-            if website_filter == "without_website":
-                has_website = False
-            elif website_filter == "with_website":
-                has_website = True
-            else:
-                has_website = (i % 2 == 0)
-                
-            domain = f"{name.lower().replace(' ', '')}.com"
-            website = f"https://www.{domain}" if has_website else ""
-            email = f"info@{domain}" if has_website else ""
-            
-            area_code = random.randint(200, 999)
-            phone = f"+1-{area_code}-555-{i:04d}"
-            
-            results.append({
-                "name": name,
-                "website": website,
-                "phone": phone,
-                "email": email,
-                "location": clean_location,
-                "score": random.randint(65, 98),
-                "provider": self.provider_name
-            })
-            
+        if not results:
+            logger.warning("Google Maps returned 0 direct results. Querying real web directory search...")
+            results = fetch_real_directory_leads(clean_keyword, clean_location, self.provider_name, limit, website_filter)
+
         return results[:limit]
