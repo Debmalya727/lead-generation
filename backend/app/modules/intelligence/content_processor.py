@@ -13,42 +13,46 @@ from typing import List
 logger = logging.getLogger("backend.intelligence.content_processor")
 
 # System prompt for the LLM to follow
-INTELLIGENCE_SYSTEM_PROMPT = """You are an expert business analyst and sales intelligence researcher.
-You analyze website content and extract structured business intelligence useful for B2B sales teams.
+INTELLIGENCE_SYSTEM_PROMPT = """You are a world-class B2B sales intelligence analyst. Your job is to analyze any available business data and produce detailed, actionable intelligence reports for enterprise sales teams.
 
 CRITICAL RULES:
-1. Return ONLY valid JSON — no explanations, no markdown code blocks, no extra text.
-2. If you cannot determine a field with reasonable confidence, use null for strings or [] for arrays.
-3. Be concise but specific — avoid generic filler phrases.
-4. Base all analysis strictly on the provided website content.
-5. The confidence_score (0-100) reflects how much useful sales intelligence you found.
-"""
+1. Return ONLY a valid JSON object — no markdown fences, no explanations, no preamble.
+2. ALWAYS populate every field with your best analysis. NEVER return empty arrays or null for all fields — use your expert business knowledge to infer what is not explicitly stated.
+3. If the website was blocked by a firewall (Akamai, Cloudflare) or is a hotel/chain, use your training data about that brand to complete the analysis.
+4. Be SPECIFIC — include real product names, service categories, pain points relevant to this industry.
+5. The executive_summary must always have at least 2 rich, specific sentences.
+6. confidence_score: 85+ if you have good data, 65-84 if inferred from brand knowledge, 50-64 if minimal data."""
 
-INTELLIGENCE_PROMPT_TEMPLATE = """Analyze the following website content for "{company_name}" ({website_url}) 
-and extract structured business intelligence for a B2B sales team.
+INTELLIGENCE_PROMPT_TEMPLATE = """Analyze the business data below for "{company_name}" (website: {website_url}) and produce a complete B2B sales intelligence report.
 
-WEBSITE CONTENT:
+AVAILABLE DATA:
 ---
 {content}
 ---
 
-Return a JSON object with EXACTLY these fields (no additional fields):
+INSTRUCTIONS:
+- If the company is a well-known brand (hotel chain, restaurant group, etc.), use your comprehensive knowledge about them.
+- Infer pain points from the industry vertical, not just the text above.
+- Buying signals should reflect realistic vendor opportunities for this type of business.
+- ideal_sales_angle must be a specific, personalized 1-2 sentence cold outreach hook.
+
+Return a JSON object with EXACTLY these fields:
 {{
-  "executive_summary": "<1-2 sentence snapshot of what this company does and who they serve>",
-  "company_description": "<detailed paragraph describing the company>",
-  "products": ["<specific product 1>", "<specific product 2>"],
-  "services": ["<specific service 1>", "<specific service 2>"],
-  "industry": "<primary industry vertical>",
-  "company_size": "<estimated headcount range, e.g. '10-50 employees' or null if unknown>",
-  "revenue_estimate": "<estimated annual revenue range or null if unknown>",
+  "executive_summary": "<2 specific sentences describing what this company does and who they serve — be descriptive>",
+  "company_description": "<detailed 3-4 sentence paragraph covering the business, its history, scale, and value proposition>",
+  "products": ["<specific product 1>", "<specific product 2>", "<specific product 3>"],
+  "services": ["<specific service 1>", "<specific service 2>", "<specific service 3>"],
+  "industry": "<primary industry vertical e.g. 'Luxury Hospitality', 'B2B SaaS', 'Manufacturing'>",
+  "company_size": "<estimated headcount range e.g. '500-2000 employees'>",
+  "revenue_estimate": "<estimated annual revenue range e.g. '$10M-$50M USD'>",
   "revenue_confidence": "<low, medium, or high>",
-  "pain_points": ["<pain point 1 likely faced by this company>", "<pain point 2>"],
-  "buying_signals": ["<buying signal 1 indicating they might be open to vendors>", "<buying signal 2>"],
-  "ideal_sales_angle": "<specific recommended approach for a sales rep to use when engaging this company>",
-  "confidence_score": <integer 0-100 reflecting how complete and useful the extracted intelligence is>
+  "pain_points": ["<specific operational pain point 1>", "<specific pain point 2>", "<specific pain point 3>"],
+  "buying_signals": ["<vendor opportunity signal 1>", "<vendor opportunity signal 2>", "<vendor opportunity signal 3>"],
+  "ideal_sales_angle": "<specific personalized cold outreach hook for a sales rep targeting this company>",
+  "confidence_score": <integer 0-100>
 }}
 
-Return only the JSON object."""
+Return only the JSON object. No markdown. No explanation."""
 
 
 class ContentProcessor:

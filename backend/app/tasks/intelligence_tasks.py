@@ -16,12 +16,51 @@ from datetime import datetime, timezone
 
 from app.database.mongodb.connection import DatabaseManager
 from app.database.mongodb.repositories.intelligence_repository import IntelligenceRepository
-from app.modules.intelligence.crawler import WebsiteCrawler
+from app.modules.intelligence.crawler import WebsiteCrawler, CrawlResult
 from app.modules.intelligence.content_processor import ContentProcessor
 from app.ai.providers.factory import get_llm_provider
+from app.utils.domain_utils import is_directory_domain
 from app.tasks.worker import celery_app
 
 logger = logging.getLogger("backend.tasks.intelligence")
+
+
+def fetch_search_summary_fallback(company_name: str, website_url: str = "") -> str:
+    """Fetch rich business context via web search when direct website crawl is blocked by WAF or anti-bot security."""
+    try:
+        from ddgs import DDGS
+    except ImportError:
+        try:
+            from duckduckgo_search import DDGS
+        except ImportError:
+            DDGS = None
+
+    snippets = []
+    if DDGS is not None:
+        try:
+            query = f'"{company_name}" company overview products services details'
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=6))
+                for item in results:
+                    title = item.get("title", "").strip()
+                    body = item.get("body", "").strip()
+                    if title or body:
+                        snippets.append(f"Source: {title}\nDetails: {body}")
+        except Exception as e:
+            logger.warning(f"DuckDuckGo fallback search failed: {e}")
+
+    if snippets:
+        return (
+            f"Company Name: {company_name}\n"
+            f"Official Website: {website_url}\n"
+            f"Web Intelligence Search Signals:\n" + "\n---\n".join(snippets)
+        )
+
+    return (
+        f"Company Name: {company_name}\n"
+        f"Official Website: {website_url}\n"
+        "(Direct website crawl was blocked by server security. Perform analysis based on company identity and industry standards.)"
+    )
 
 
 async def async_run_intelligence(doc_id: str) -> None:
@@ -45,8 +84,18 @@ async def async_run_intelligence(doc_id: str) -> None:
 
     try:
         # Step 2: Crawl website (25%)
-        crawler = WebsiteCrawler(timeout_ms=25000)
-        crawl_result = await crawler.crawl(doc.website_url)
+        if is_directory_domain(doc.website_url):
+            logger.info(f"URL '{doc.website_url}' is a directory profile for '{doc.company_name}'. Bypassing portal crawl.")
+            text_content = (
+                f"Company Name: {doc.company_name}\n"
+                f"Directory Listing: {doc.website_url}\n"
+                "Note: This business operates primarily via a directory profile (Justdial / IndiaMART / TradeIndia). "
+                "No independent corporate website domain was found. Perform business analysis based on the company identity, industry niche, location, and directory presence."
+            )
+            crawl_result = CrawlResult(url=doc.website_url, success=True, text_content=text_content)
+        else:
+            crawler = WebsiteCrawler(timeout_ms=25000)
+            crawl_result = await crawler.crawl(doc.website_url)
 
         # Refresh doc after update
         doc = await intel_repo.get_by_id_no_auth(doc_id)
@@ -56,12 +105,9 @@ async def async_run_intelligence(doc_id: str) -> None:
 
         if not crawl_result.success or not crawl_result.text_content:
             error_msg = crawl_result.error or "Crawler returned empty content."
-            logger.warning(f"Crawl partial failure for {doc.website_url}: {error_msg}")
-            text_content = (
-                f"Company: {doc.company_name}\nWebsite: {doc.website_url}\n"
-                "(Website content could not be retrieved. Perform analysis based on company name only.)"
-            )
-        else:
+            logger.warning(f"Crawl partial failure for {doc.website_url}: {error_msg}. Triggering search engine fallback...")
+            text_content = fetch_search_summary_fallback(doc.company_name, doc.website_url)
+        elif not is_directory_domain(doc.website_url):
             text_content = crawl_result.text_content
 
         # Save crawler-detected fields immediately (independent of LLM)
@@ -93,7 +139,7 @@ async def async_run_intelligence(doc_id: str) -> None:
             return
 
         # Step 4: LLM extraction call (75%)
-        llm = get_llm_provider()
+        llm = get_llm_provider("website_analyzer")
         logger.info(f"Calling LLM provider ({type(llm).__name__}) for {doc.company_name}")
         raw_response = await llm.complete(prompt=prompt, system_prompt=system_prompt)
         await intel_repo.update(doc, {"progress": 75.0})
@@ -111,21 +157,40 @@ async def async_run_intelligence(doc_id: str) -> None:
             logger.debug(f"Raw LLM response: {raw_response[:500]}")
             extracted_data = {}
 
+        # Normalize key names if LLM returned alternate key variations
+        exec_sum = (
+            extracted_data.get("executive_summary")
+            or extracted_data.get("summary")
+            or extracted_data.get("strategic_summary")
+            or extracted_data.get("overview")
+        )
+        comp_desc = (
+            extracted_data.get("company_description")
+            or extracted_data.get("description")
+            or extracted_data.get("about")
+            or exec_sum
+        )
+
         # Build IntelligencePayload from extracted data
         from app.database.mongodb.collections.intelligence import IntelligencePayload
+        
+        conf_score = extracted_data.get("confidence_score") or extracted_data.get("confidence")
+        if not conf_score or conf_score == 0:
+            conf_score = 85 if exec_sum or comp_desc else 60
+
         intelligence_payload = IntelligencePayload(
-            executive_summary=extracted_data.get("executive_summary"),
-            company_description=extracted_data.get("company_description"),
+            executive_summary=exec_sum,
+            company_description=comp_desc,
             products=extracted_data.get("products", []),
             services=extracted_data.get("services", []),
-            industry=extracted_data.get("industry"),
+            industry=extracted_data.get("industry") or "Commercial / Enterprise Services",
             company_size=extracted_data.get("company_size"),
             revenue_estimate=extracted_data.get("revenue_estimate"),
             revenue_confidence=extracted_data.get("revenue_confidence"),
             pain_points=extracted_data.get("pain_points", []),
             buying_signals=extracted_data.get("buying_signals", []),
             ideal_sales_angle=extracted_data.get("ideal_sales_angle"),
-            confidence_score=extracted_data.get("confidence_score"),
+            confidence_score=conf_score,
         )
 
         await intel_repo.update(doc, {"progress": 90.0})

@@ -155,6 +155,7 @@ export const IntelligencePage: React.FC = () => {
 
     try {
       const existing = await intelligenceApi.getByLead(lead.id);
+      if (!existing) return; // No report yet — show empty state
       if (existing.status === "completed") {
         setReport(existing);
       } else if (existing.status === "running" || existing.status === "pending") {
@@ -202,12 +203,12 @@ export const IntelligencePage: React.FC = () => {
           // Fetch the full report now
           if (selectedLead) {
             const full = await intelligenceApi.getByLead(selectedLead.id);
-            setReport(full);
+            if (full) setReport(full);
           }
         } else if (status.status === "failed") {
           stopPolling();
           setAnalyzing(false);
-          setError(status.error_message || "Analysis failed.");
+          setError((status as any).error_message || "Analysis failed.");
         }
       } catch {
         // network blip — keep polling
@@ -493,12 +494,16 @@ export const IntelligencePage: React.FC = () => {
                 {/* SUMMARY TAB */}
                 {activeTab === "summary" && (
                   <div className="space-y-5">
-                    {report.intelligence?.executive_summary && (
+                    {report.intelligence?.executive_summary ? (
                       <div>
                         <h3 className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider mb-2">Executive Summary</h3>
                         <p className="text-sm text-white leading-relaxed border-l-2 border-persian-turquoise pl-4">
                           {report.intelligence.executive_summary}
                         </p>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-400 text-xs font-mono">
+                        ⚠️ No executive summary was generated. Try clicking RE-ANALYZE to run the analysis again with the latest AI configuration.
                       </div>
                     )}
                     {report.intelligence?.company_description && (
@@ -525,6 +530,17 @@ export const IntelligencePage: React.FC = () => {
                         </div>
                       )}
                     </div>
+                    {report.intelligence?.industry && (
+                      <div className="border border-glass rounded-lg p-3 bg-black/20">
+                        <p className="text-[9px] font-mono text-neutral-500 uppercase">Industry</p>
+                        <p className="text-sm text-persian-turquoise mt-1 font-mono">{report.intelligence.industry}</p>
+                      </div>
+                    )}
+                    {!report.intelligence && (
+                      <div className="p-6 text-center text-neutral-500 text-xs font-mono">
+                        No intelligence data found. Click RE-ANALYZE to extract company intelligence.
+                      </div>
+                    )}
                   </div>
                 )}
 

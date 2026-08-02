@@ -48,7 +48,7 @@ class ReviewAgent(BaseAgent):
 
     def __init__(self):
         super().__init__()
-        self.llm_provider = get_llm_provider()
+        self.llm_provider = get_llm_provider("website_analyzer")
 
     async def execute(self, context: ExecutionContext) -> AgentResult:
         """Perform quality audit of all prior agent outputs."""

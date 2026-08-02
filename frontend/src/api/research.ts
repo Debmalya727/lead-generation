@@ -180,9 +180,16 @@ export const researchApi = {
     return response.data;
   },
 
-  getReportByLead: async (leadId: string) => {
-    const response = await axiosClient.get<ResearchReport>(`/research/lead/${leadId}`);
-    return response.data;
+  getReportByLead: async (leadId: string): Promise<ResearchReport | null> => {
+    try {
+      const response = await axiosClient.get<ResearchReport>(`/research/lead/${leadId}`);
+      return response.data;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw err;
+    }
   },
 
   getWebsiteResearch: async (leadId: string) => {

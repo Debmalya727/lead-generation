@@ -178,30 +178,6 @@ export const LeadsPage: React.FC = () => {
               >
                 ✉️ OUTREACH
               </Link>
-              <Link
-                to="/sales-intelligence"
-                className="px-3 py-1.5 border border-glass hover:border-persian-turquoise/40 text-neutral-400 hover:text-white font-mono text-xs rounded transition-all"
-              >
-                ⚡ SALES INTELLIGENCE
-              </Link>
-              <Link
-                to="/research"
-                className="px-3 py-1.5 border border-glass hover:border-persian-turquoise/40 text-neutral-400 hover:text-white font-mono text-xs rounded transition-all"
-              >
-                🤖 RESEARCH AGENTS
-              </Link>
-              <Link
-                to="/knowledge"
-                className="px-3 py-1.5 border border-glass hover:border-persian-turquoise/40 text-neutral-400 hover:text-white font-mono text-xs rounded transition-all"
-              >
-                📚 KNOWLEDGE (RAG)
-              </Link>
-              <Link
-                to="/agents"
-                className="px-3 py-1.5 border border-glass hover:border-persian-turquoise/40 text-purple-400 hover:text-white font-mono text-xs rounded transition-all bg-purple-500/10 border-purple-500/20"
-              >
-                🚀 AGENTS (DAG)
-              </Link>
             </nav>
             <div className="hidden md:block text-right">
               <p className="text-xs text-neutral-300 font-medium">{user.full_name}</p>

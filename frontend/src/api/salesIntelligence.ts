@@ -111,44 +111,51 @@ export interface SalesIntelligenceReport {
 
 export const salesIntelligenceApi = {
   analyzeLead: async (leadId: string): Promise<SalesIntelligenceStatusResponse> => {
-    const res = await axiosClient.post<SalesIntelligenceStatusResponse>('/api/v1/sales-intelligence/analyze', {
+    const res = await axiosClient.post<SalesIntelligenceStatusResponse>('/sales-intelligence/analyze', {
       lead_id: leadId,
     });
     return res.data;
   },
 
-  getReportByLead: async (leadId: string): Promise<SalesIntelligenceReport> => {
-    const res = await axiosClient.get<SalesIntelligenceReport>(`/api/v1/sales-intelligence/lead/${leadId}`);
-    return res.data;
+  getReportByLead: async (leadId: string): Promise<SalesIntelligenceReport | null> => {
+    try {
+      const res = await axiosClient.get<SalesIntelligenceReport>(`/sales-intelligence/lead/${leadId}`);
+      return res.data;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw err;
+    }
   },
 
   getJobStatus: async (jobId: string): Promise<SalesIntelligenceStatusResponse> => {
-    const res = await axiosClient.get<SalesIntelligenceStatusResponse>(`/api/v1/sales-intelligence/${jobId}/status`);
+    const res = await axiosClient.get<SalesIntelligenceStatusResponse>(`/sales-intelligence/${jobId}/status`);
     return res.data;
   },
 
   getGrowthSignals: async (leadId: string): Promise<GrowthSignal[]> => {
-    const res = await axiosClient.get<GrowthSignal[]>(`/api/v1/sales-intelligence/${leadId}/signals`);
+    const res = await axiosClient.get<GrowthSignal[]>(`/sales-intelligence/${leadId}/signals`);
     return res.data;
   },
 
   getDecisionMakers: async (leadId: string): Promise<DecisionMaker[]> => {
-    const res = await axiosClient.get<DecisionMaker[]>(`/api/v1/sales-intelligence/${leadId}/decision-makers`);
+    const res = await axiosClient.get<DecisionMaker[]>(`/sales-intelligence/${leadId}/decision-makers`);
     return res.data;
   },
 
   getTimeline: async (leadId: string): Promise<CompanyTimeline> => {
-    const res = await axiosClient.get<CompanyTimeline>(`/api/v1/sales-intelligence/${leadId}/timeline`);
+    const res = await axiosClient.get<CompanyTimeline>(`/sales-intelligence/${leadId}/timeline`);
     return res.data;
   },
 
   getRecommendations: async (leadId: string): Promise<SalesRecommendation> => {
-    const res = await axiosClient.get<SalesRecommendation>(`/api/v1/sales-intelligence/${leadId}/recommendations`);
+    const res = await axiosClient.get<SalesRecommendation>(`/sales-intelligence/${leadId}/recommendations`);
     return res.data;
   },
 
   deleteReport: async (leadId: string): Promise<{ status: string; message: string }> => {
-    const res = await axiosClient.delete<{ status: string; message: string }>(`/api/v1/sales-intelligence/lead/${leadId}`);
+    const res = await axiosClient.delete<{ status: string; message: string }>(`/sales-intelligence/lead/${leadId}`);
     return res.data;
   },
 };

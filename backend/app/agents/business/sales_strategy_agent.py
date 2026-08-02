@@ -49,7 +49,7 @@ class SalesStrategyAgent(BaseAgent):
 
     def __init__(self):
         super().__init__()
-        self.llm_provider = get_llm_provider()
+        self.llm_provider = get_llm_provider("lead_scorer")
 
     async def execute(self, context: ExecutionContext) -> AgentResult:
         """Produce a complete sales strategy from research and memory context."""
