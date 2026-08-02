@@ -5,6 +5,25 @@ LeadForgeAI is an enterprise-grade AI sales intelligence platform designed to co
 
 ---
 
+## 📸 Platform Screenshots
+
+### 🌐 Enterprise Lead Discovery Workspace
+Real-time multi-provider lead discovery engine integrating Google Maps, Justdial, IndiaMART, and TradeIndia with live AI deduplication, pipeline progress tracking, and score metrics.
+
+![Enterprise Lead Discovery Workspace](docs/assets/discovery_workspace.png)
+
+### 📊 Lead Management & Intelligence Portal
+Centralized workspace for lead indexing, quality score filtering, provider source identification, export/import workflows, and outreach tracking.
+
+![Lead Management Workspace](docs/assets/lead_management.png)
+
+### 🔐 Secure Operator Portal
+Operator access interface with glowing cyber-themed design system.
+
+![Secure Access Portal](docs/assets/secure_login_portal.png)
+
+---
+
 ## ✨ Key Features & The AI Workforce
 Our system operates using specialized AI agents that communicate asynchronously to get the job done.
 
