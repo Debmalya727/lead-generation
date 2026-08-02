@@ -57,7 +57,7 @@ export const ChatPage: React.FC = () => {
       setMessages(history);
       if (history.length > 0) {
         const lastWithVis = [...history].reverse().find(m => m.execution_visualization && Object.keys(m.execution_visualization).length > 0);
-        if (lastWithVis) setActiveVisualization(lastWithVis.execution_visualization);
+        if (lastWithVis?.execution_visualization) setActiveVisualization(lastWithVis.execution_visualization);
       }
     } catch {}
   };

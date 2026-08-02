@@ -4,6 +4,13 @@ from app.database.mongodb.collections.job import ScrapeJob
 
 
 class JobRepository:
+    async def list_by_owner(self, owner_id: str, limit: int = 20) -> list[ScrapeJob]:
+        """Fetch list of ScrapeJobs owned by user sorted by created_at descending."""
+        try:
+            return await ScrapeJob.find(ScrapeJob.owner_id == ObjectId(owner_id)).sort("-created_at").limit(limit).to_list()
+        except Exception:
+            return await ScrapeJob.find_all().sort("-created_at").limit(limit).to_list()
+
     async def get_by_id(self, job_id: str, owner_id: str) -> Optional[ScrapeJob]:
         """Fetch ScrapeJob document by ID, checking owner constraint."""
         try:

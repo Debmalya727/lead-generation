@@ -1,51 +1,92 @@
+"""
+Enterprise Discovery Module.
+Orchestrates lead discovery jobs, provider health monitoring, deduplication merge logs,
+CRM lead import, Knowledge Fabric integration, and analytics snapshots.
+"""
 import logging
-from typing import List
+from typing import List, Dict, Any, Optional
 from bson import ObjectId
 from fastapi import HTTPException, status
 from app.database.mongodb.collections.job import ScrapeJob
+from app.database.mongodb.collections.discovery import (
+    DiscoveredCompanyDocument,
+    DuplicateMergeLogDocument,
+    DiscoveryProviderHealthDocument,
+)
 from app.database.mongodb.repositories.job_repository import JobRepository
 from app.database.mongodb.repositories.lead_repository import LeadRepository
-from app.schemas.discovery import DiscoveryStartRequest, DiscoveredLeadResponse, JobStatusResponse, SaveLeadsRequest
+from app.schemas.discovery import DiscoveryStartRequest, JobStatusResponse, SaveLeadsRequest
+from app.modules.discovery.providers.provider_registry import provider_registry
+from app.modules.discovery.analytics.discovery_analytics import discovery_analytics
 from app.tasks.discovery_tasks import run_discovery
+from app.events.event_bus.bus import event_bus
+from app.events.schemas.events import LeadCRMCreatedEvent
 
 logger = logging.getLogger("backend.modules.discovery")
 
 
 class DiscoveryModule:
+    """Orchestration layer for Enterprise Lead Discovery Platform."""
+
     def __init__(self, job_repository: JobRepository, lead_repository: LeadRepository):
         self.job_repo = job_repository
         self.lead_repo = lead_repository
 
     async def start_discovery(self, payload: DiscoveryStartRequest, owner_id: str) -> JobStatusResponse:
-        """Create a discovery job and enqueue it in Celery background workers."""
+        """Register a new lead discovery job and queue 9-stage Celery background pipeline."""
         valid_providers = {"google_maps", "justdial", "indiamart", "tradeindia"}
-        for p in payload.providers:
-            if p.lower().strip() not in valid_providers:
+        requested_providers = [p.lower().strip() for p in payload.providers]
+
+        for p in requested_providers:
+            if p not in valid_providers:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid provider: {p}. Choose from google_maps, justdial, indiamart, tradeindia."
+                    detail=f"Invalid provider: {p}. Valid options: {', '.join(valid_providers)}",
                 )
-                
+
         job_data = {
             "owner_id": ObjectId(owner_id),
             "keyword": payload.keyword.strip(),
             "location": payload.location.strip(),
-            "providers": [p.lower().strip() for p in payload.providers],
+            "providers": requested_providers,
             "website_filter": payload.website_filter or "all",
             "limit": payload.limit or 20,
             "status": "pending",
             "progress": 0.0,
             "total_results": 0,
-            "results": []
+            "results": [],
         }
-        
+
         job = await self.job_repo.create(job_data)
-        logger.info(f"Created ScrapeJob {job.id} for owner {owner_id}. Enqueueing Celery background task...")
-        
-        # Enqueue background task
+        logger.info(f"[DiscoveryModule] Created ScrapeJob {job.id} for owner {owner_id}. Enqueuing Celery background pipeline...")
+
+        # Enqueue background pipeline task
         run_discovery.delay(str(job.id))
-        
+
         return JobStatusResponse.from_orm(job)
+
+    async def get_latest_job(self, owner_id: str) -> JobStatusResponse:
+        """Fetch status progress of the most recent discovery job for user."""
+        jobs = await self.job_repo.list_by_owner(owner_id)
+        if not jobs:
+            # Fallback to querying all jobs in DB
+            jobs = await ScrapeJob.find_all().sort("-created_at").to_list()
+        if not jobs:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No discovery jobs found.",
+            )
+        return JobStatusResponse.model_validate(jobs[0]) if hasattr(JobStatusResponse, "model_validate") else JobStatusResponse.from_orm(jobs[0])
+
+    async def get_all_discovered_companies(self, owner_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all canonical discovered company documents across all jobs."""
+        docs = await DiscoveredCompanyDocument.find_all().to_list()
+        results = []
+        for doc in docs:
+            d = doc.model_dump() if hasattr(doc, "model_dump") else doc.dict()
+            d["id"] = str(doc.id)
+            results.append(d)
+        return results
 
     async def get_job_status(self, job_id: str, owner_id: str) -> JobStatusResponse:
         """Fetch status progress of a specific discovery job."""
@@ -53,96 +94,133 @@ class DiscoveryModule:
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Discovery job not found or access denied."
+                detail="Discovery job not found or access denied.",
             )
         return JobStatusResponse.from_orm(job)
 
-    async def get_job_results(self, job_id: str, owner_id: str) -> List[DiscoveredLeadResponse]:
-        """Fetch list of business results extracted by a specific discovery job."""
+    async def get_job_results(self, job_id: str, owner_id: str) -> List[Dict[str, Any]]:
+        """Fetch canonical enriched lead documents discovered by a job."""
         job = await self.job_repo.get_by_id(job_id, owner_id)
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Discovery job not found or access denied."
+                detail="Discovery job not found or access denied.",
             )
-        return [DiscoveredLeadResponse(**res.dict()) for res in job.results]
+
+        # Query DiscoveredCompanyDocument collection
+        docs = await DiscoveredCompanyDocument.find(
+            DiscoveredCompanyDocument.job_id == job_id
+        ).to_list()
+
+        if docs:
+            results = []
+            for doc in docs:
+                d = doc.dict()
+                d["id"] = str(doc.id)
+                results.append(d)
+            return results
+
+        # Fallback to ScrapeJob sub-document results
+        return [res.dict() for res in job.results]
+
+    async def get_job_duplicates(self, job_id: str, owner_id: str) -> List[Dict[str, Any]]:
+        """Fetch deduplication merge logs for a specific job."""
+        logs = await DuplicateMergeLogDocument.find(
+            DuplicateMergeLogDocument.job_id == job_id
+        ).to_list()
+        return [l.dict() for l in logs]
 
     async def cancel_job(self, job_id: str, owner_id: str) -> dict:
-        """Mark job status as cancelled so Celery tasks terminate dynamically."""
+        """Mark job status as cancelled so active tasks terminate dynamically."""
         job = await self.job_repo.get_by_id(job_id, owner_id)
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Discovery job not found or access denied."
+                detail="Discovery job not found or access denied.",
             )
-            
+
         if job.status in ("completed", "failed", "cancelled"):
             return {"status": "success", "message": f"Job is already in {job.status} terminal state."}
-            
+
         await self.job_repo.update(job, {"status": "cancelled", "progress": 100.0})
-        logger.info(f"Cancelled discovery job: {job_id} under owner: {owner_id}")
+        logger.info(f"[DiscoveryModule] Cancelled discovery job: {job_id} under owner: {owner_id}")
         return {"status": "success", "message": "Discovery job cancellation command submitted."}
 
+    async def get_provider_health(self) -> Dict[str, Any]:
+        """Fetch health metrics and circuit breaker status across all registered providers."""
+        return provider_registry.get_health_summary()
+
+    async def get_analytics_dashboard(self, owner_id: str) -> Dict[str, Any]:
+        """Fetch unified discovery platform analytics dashboard."""
+        return await discovery_analytics.get_dashboard_analytics(owner_id)
+
     async def save_selected_leads(self, job_id: str, payload: SaveLeadsRequest, owner_id: str) -> dict:
-        """Persist selected discovered leads into active workspace businesses collection, ignoring duplicates."""
+        """Save selected discovered leads into active CRM leads database, skipping duplicates."""
         job = await self.job_repo.get_by_id(job_id, owner_id)
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Discovery job not found or access denied."
+                detail="Discovery job not found or access denied.",
             )
-            
+
         target_ids = set(payload.lead_ids)
-        leads_to_save = [res for res in job.results if res.id in target_ids]
-        
-        if not leads_to_save:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No matching discovered leads found for the provided selection IDs."
-            )
-            
+        discovered_docs = await DiscoveredCompanyDocument.find(
+            DiscoveredCompanyDocument.job_id == job_id
+        ).to_list()
+
         saved_count = 0
         skipped_count = 0
-        
-        for d_lead in leads_to_save:
-            # Query if duplicates exist in main businesses leads list
+
+        for idx, doc in enumerate(discovered_docs):
+            doc_legacy_id = f"{job_id}_{idx}"
+            if str(doc.id) not in target_ids and doc.fingerprint not in target_ids and doc_legacy_id not in target_ids:
+                continue
+
             existing, _ = await self.lead_repo.list_leads(
                 owner_id=owner_id,
-                search=d_lead.name,
-                status=None
+                search=doc.company_name,
+                status=None,
             )
-            
-            # Simple duplication check on name and location match
+
             is_duplicate = False
             for lead in existing:
-                if lead.name.lower().strip() == d_lead.name.lower().strip():
-                    if (lead.location or "").lower().strip() == (d_lead.location or "").lower().strip():
-                        is_duplicate = True
-                        break
-                        
+                if lead.name.lower().strip() == doc.company_name.lower().strip():
+                    is_duplicate = True
+                    break
+
             if is_duplicate:
                 skipped_count += 1
                 continue
-                
-            # Create a Lead model in collection
+
+            # Create CRM Lead record
             lead_payload = {
                 "owner_id": ObjectId(owner_id),
-                "name": d_lead.name,
-                "website": d_lead.website,
-                "phone": d_lead.phone,
-                "email": d_lead.email,
-                "location": d_lead.location,
-                "score": d_lead.score,
+                "name": doc.company_name,
+                "website": doc.website,
+                "phone": doc.phones[0] if doc.phones else None,
+                "email": doc.emails[0] if doc.emails else None,
+                "location": f"{doc.city or job.location}, {doc.country}",
+                "score": doc.quality_score or 75,
                 "status": "discovered",
-                "job_id": ObjectId(job_id)
+                "job_id": ObjectId(job_id),
             }
-            await self.lead_repo.create(lead_payload)
+            crm_lead = await self.lead_repo.create(lead_payload)
+
+            doc.crm_id = str(crm_lead.id)
+            doc.crm_created = True
+            await doc.save()
+
+            await event_bus.publish(LeadCRMCreatedEvent(
+                source="DiscoveryModule",
+                payload={"crm_lead_id": str(crm_lead.id), "company_name": doc.company_name, "owner_id": owner_id}
+            ))
+
             saved_count += 1
-            
-        logger.info(f"Saved {saved_count} leads from job {job_id} to owner {owner_id} leads database. Skipped {skipped_count} duplicates.")
+
+        logger.info(f"[DiscoveryModule] Saved {saved_count} leads to CRM for job {job_id}. Skipped {skipped_count} duplicates.")
         return {
             "status": "success",
-            "message": f"Successfully saved {saved_count} leads. Skipped {skipped_count} duplicate entries.",
+            "message": f"Successfully imported {saved_count} leads to CRM. Skipped {skipped_count} duplicate records.",
             "saved_count": saved_count,
-            "skipped_count": skipped_count
+            "skipped_count": skipped_count,
         }

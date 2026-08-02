@@ -148,8 +148,8 @@ export const VoiceWorkspacePage: React.FC = () => {
 
   // Event Logs & Benchmarks
   const [eventLogs, setEventLogs] = useState<VoiceEvent[]>([]);
-  const [benchmarks, setBenchmarks] = useState<SpeechBenchmark[]>([]);
-  const [ttsBenchmarks, setTtsBenchmarks] = useState<TTSBenchmark[]>([]);
+  const [_benchmarks, setBenchmarks] = useState<SpeechBenchmark[]>([]);
+  const [_ttsBenchmarks, setTtsBenchmarks] = useState<TTSBenchmark[]>([]);
 
   // Speech Gateway (13.2) State
   const [sttProvider, setSttProvider] = useState("whisper");
@@ -159,23 +159,23 @@ export const VoiceWorkspacePage: React.FC = () => {
   // TTS Gateway (13.3) State
   const [ttsProvider, setTtsProvider] = useState("elevenlabs");
   const [ttsVoiceId, setTtsVoiceId] = useState("21m00Tcm4TlvDq8ikWAM");
-  const [ttsText, setTtsText] = useState("<speak>Hello! Welcome to LeadForgeAI <break time=\"200ms\"/> Enterprise AI Operating System.</speak>");
+  const [ttsText, _setTtsText] = useState("<speak>Hello! Welcome to LeadForgeAI <break time=\"200ms\"/> Enterprise AI Operating System.</speak>");
   const [isSynthesizing, setIsSynthesizing] = useState(false);
 
   // Voice Command Planner (13.6) State
   const [commandInput, setCommandInput] = useState("Research Tesla");
   const [isExecutingCommand, setIsExecutingCommand] = useState(false);
-  const [commandLogs, setCommandLogs] = useState<VoiceCommandLog[]>([]);
+  const [_commandLogs, setCommandLogs] = useState<VoiceCommandLog[]>([]);
 
   // Voice Meeting Assistant (13.7) State
   const [meetingPlatform, setMeetingPlatform] = useState("google_meet");
   const [meetingUrl, setMeetingUrl] = useState("https://meet.google.com/abc-defg-hij");
   const [activeMeetingId, setActiveMeetingId] = useState<string | null>(null);
-  const [isMeetingActive, setIsMeetingActive] = useState(false);
-  const [meetingSegments, setMeetingSegments] = useState<DiarizedSegment[]>([]);
-  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
-  const [meetingSummary, setMeetingSummary] = useState<MeetingSummary | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [_isMeetingActive, setIsMeetingActive] = useState(false);
+  const [_meetingSegments, setMeetingSegments] = useState<DiarizedSegment[]>([]);
+  const [_actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [_meetingSummary, setMeetingSummary] = useState<MeetingSummary | null>(null);
+  const [_searchQuery, _setSearchQuery] = useState("");
 
   // Conversational Voice Agents (13.8) State
   const [selectedPersona, setSelectedPersona] = useState("sdr_persona");
@@ -271,7 +271,7 @@ export const VoiceWorkspacePage: React.FC = () => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ call_id: activeCallId, target_number: transferTarget, provider_id: telephonyProvider }),
       });
-      const data = await res.json();
+      await res.json();
       setActiveCallStatus("transferred");
     } catch {}
   };
@@ -798,6 +798,7 @@ export const VoiceWorkspacePage: React.FC = () => {
                 </select>
                 <input type="text" value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} style={{ padding: "0.6rem", borderRadius: "6px", background: "#0a0f1e", border: "1px solid rgba(52,211,153,0.3)", color: "#fff" }} />
                 <button onClick={handleStartMeeting} style={{ padding: "0.65rem", borderRadius: "6px", border: "none", background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Connect Bot</button>
+                <button onClick={handleStopMeeting} style={{ padding: "0.65rem", borderRadius: "6px", background: "rgba(239,68,68,0.2)", color: "#f87171", fontWeight: 700, cursor: "pointer", border: "1px solid rgba(239,68,68,0.4)" }}>Stop Bot</button>
               </div>
             </div>
           </div>

@@ -36,8 +36,11 @@ class CostTracker:
         conversation_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         plugin_id: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        endpoint: Optional[str] = None,
     ) -> None:
-        """Accumulates USD cost metrics in CostUsageDocument."""
+        """Accumulates USD cost metrics in CostUsageDocument across all identifier types."""
         if cost <= 0.0:
             return
 
@@ -54,6 +57,12 @@ class CostTracker:
             targets.append(("agent", agent_id))
         if plugin_id:
             targets.append(("plugin", plugin_id))
+        if provider:
+            targets.append(("provider", provider))
+        if model:
+            targets.append(("model", model))
+        if endpoint:
+            targets.append(("endpoint", endpoint))
 
         for id_type, id_val in targets:
             try:

@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional, List, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
@@ -64,6 +65,19 @@ from app.database.mongodb.collections.ai_gateway import (
     ProviderRegistryDocument,
     PromptTemplateDocument,
     PromptVersionDocument,
+    PromptABTestDocument,
+    ToolRegistryDocument,
+    ToolExecutionLogDocument,
+    EnterpriseAgentDocument,
+    AgentPlanDocument,
+    AgentTeamExecutionDocument,
+    RequestTraceDocument,
+    AnomalyAlertDocument,
+    SecurityAuditEventDocument,
+    EmailTemplateDocument,
+    EmailCampaignDocument,
+    EmailWebhookEventDocument,
+    PlaygroundSessionDocument,
     TokenUsageDocument,
     CostUsageDocument,
     EmbeddingCacheDocument,
@@ -184,15 +198,34 @@ from app.database.mongodb.collections.knowledge import (
     KnowledgeAlertRecord,
     KnowledgeExportRecord,
 )
+from app.database.mongodb.collections.discovery import (
+    DiscoveredCompanyDocument,
+    DuplicateMergeLogDocument,
+    DiscoveryProviderHealthDocument,
+    DiscoveryAnalyticsDocument,
+)
 
 # List of documents mapping to Beanie ODM.
-DOCUMENT_MODELS = [
+DOCUMENT_MODELS: List[Any] = [
     AIRequestDocument,
     AIResponseDocument,
     ModelRegistryDocument,
     ProviderRegistryDocument,
     PromptTemplateDocument,
     PromptVersionDocument,
+    PromptABTestDocument,
+    ToolRegistryDocument,
+    ToolExecutionLogDocument,
+    EnterpriseAgentDocument,
+    AgentPlanDocument,
+    AgentTeamExecutionDocument,
+    RequestTraceDocument,
+    AnomalyAlertDocument,
+    SecurityAuditEventDocument,
+    EmailTemplateDocument,
+    EmailCampaignDocument,
+    EmailWebhookEventDocument,
+    PlaygroundSessionDocument,
     TokenUsageDocument,
     CostUsageDocument,
     EmbeddingCacheDocument,
@@ -338,15 +371,23 @@ DOCUMENT_MODELS = [
     AnswerVerificationRecord,
     KnowledgeLifecycleRecord,
     KnowledgeAnalyticsEventDoc,
-    KnowledgeAnalyticsDailyDoc,
-    KnowledgeAlertRecord,
-    KnowledgeExportRecord,
+    # Phase 15 Enterprise Lead Discovery Platform
+    DiscoveredCompanyDocument,
+    DuplicateMergeLogDocument,
+    DiscoveryProviderHealthDocument,
+    DiscoveryAnalyticsDocument,
 ]
 
-from typing import Optional
+from typing import Optional, List, Any
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DatabaseManager:
-    client: AsyncIOMotorClient = None
+    client: Optional[AsyncIOMotorClient] = None
     db_name: Optional[str] = None
 
     @classmethod

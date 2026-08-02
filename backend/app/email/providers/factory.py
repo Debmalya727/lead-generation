@@ -11,6 +11,8 @@ from app.email.providers.base_provider import BaseEmailProvider
 from app.email.providers.smtp_provider import SMTPProvider
 from app.email.providers.gmail_provider import GmailProvider
 from app.email.providers.outlook_provider import OutlookProvider
+from app.email.providers.resend_provider import ResendProvider
+from app.config.settings import settings
 
 logger = logging.getLogger("backend.email.factory")
 
@@ -18,15 +20,20 @@ logger = logging.getLogger("backend.email.factory")
 def get_email_provider(account: Optional[EmailAccount] = None) -> BaseEmailProvider:
     """
     Instantiate and return an email provider instance based on account settings.
-    Falls back to local SMTP / mock if account is None.
+    Falls back to Resend or SMTP if account is None.
     """
     if not account:
+        if settings.RESEND_API_KEY:
+            logger.info("No EmailAccount provided. Using configured ResendProvider.")
+            return ResendProvider()
         logger.info("No EmailAccount provided. Using default fallback SMTPProvider.")
         return SMTPProvider()
 
     ptype = (account.provider_type or "smtp").lower().strip()
 
-    if ptype == "gmail":
+    if ptype == "resend":
+        return ResendProvider(api_key=account.api_key or settings.RESEND_API_KEY)
+    elif ptype == "gmail":
         return GmailProvider(
             email_address=account.email_address,
             app_password_or_token=account.smtp_password or account.api_key,

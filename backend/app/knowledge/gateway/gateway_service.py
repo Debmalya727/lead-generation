@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from app.database.mongodb.collections.knowledge import (
     KnowledgeDocument,
+    KnowledgeImportJob,
     KnowledgeSource,
     KnowledgeValidationRecord,
 )
@@ -33,6 +34,9 @@ SUPPORTED_ASSET_TYPES = {
 
 class EnterpriseKnowledgeGatewayService:
     """Core enterprise gateway service for asset ingestion and validation."""
+
+    async def start_import_job(self, user_id: str = "user_default", source_name: str = "Manual_Importer") -> KnowledgeImportJob:
+        return await import_tracker.create_job(user_id=user_id, source_name=source_name)
 
     async def create_source(self, name: str, source_type: str, config: Optional[Dict[str, Any]] = None) -> KnowledgeSource:
         source_id = f"src_{uuid.uuid4().hex[:12]}"
@@ -141,12 +145,14 @@ class EnterpriseKnowledgeGatewayService:
         return await KnowledgeDocument.find_one(KnowledgeDocument.document_id == document_id)
 
     async def _write_audit_log(self, user_id: str, action: str, details: str):
+        aud_id = f"aud_{uuid.uuid4().hex[:12]}"
         audit = AuditLogDocument(
-            user_id=user_id,
-            action=action,
+            audit_id=aud_id,
+            event_type=action.lower(),
+            actor_id=user_id,
             resource_type="knowledge_object",
-            details=details,
-            created_at=datetime.now(timezone.utc),
+            details={"action": action, "message": details},
+            timestamp=datetime.now(timezone.utc),
         )
         try:
             await audit.insert()

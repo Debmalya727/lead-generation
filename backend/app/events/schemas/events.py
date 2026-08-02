@@ -101,3 +101,32 @@ class FeatureFlagChangedEvent(PlatformEvent):
 class SystemHealthChangedEvent(PlatformEvent):
     event_type: str = "SystemHealthChanged"
     topic: str = "platform"
+
+class LeadNormalizedEvent(PlatformEvent):
+    event_type: str = "LeadNormalized"
+    topic: str = "leads"
+
+class LeadDuplicateDetectedEvent(PlatformEvent):
+    event_type: str = "LeadDuplicateDetected"
+    topic: str = "leads"
+
+class LeadEnrichedEvent(PlatformEvent):
+    event_type: str = "LeadEnriched"
+    topic: str = "leads"
+
+class LeadScoreUpdatedEvent(PlatformEvent):
+    event_type: str = "LeadScoreUpdated"
+    topic: str = "leads"
+
+class LeadCRMCreatedEvent(PlatformEvent):
+    event_type: str = "LeadCRMCreated"
+    topic: str = "leads"
+
+class LeadDiscoveryFailedEvent(PlatformEvent):
+    event_type: str = "LeadDiscoveryFailed"
+    topic: str = "leads"
+
+class ProviderHealthChangedEvent(PlatformEvent):
+    event_type: str = "ProviderHealthChanged"
+    topic: str = "discovery"
+

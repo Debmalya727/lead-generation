@@ -11,7 +11,7 @@ import uuid
 import time
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, AsyncGenerator
+from typing import Dict, Any, List, Optional, AsyncGenerator
 
 from app.ai.registry.provider_registry import ProviderRegistry
 from app.ai.registry.model_registry import ModelRegistry
@@ -19,6 +19,8 @@ from app.ai.cache.ai_cache import ai_cache
 from app.ai.router.fallback import fallback_engine
 from app.ai.cost.token_manager import token_manager
 from app.ai.cost.cost_tracker import cost_tracker
+from app.ai.tools.tool_registry import tool_registry
+from app.ai.tools.tool_sandbox import tool_sandbox
 from app.database.mongodb.collections.ai_gateway import AIRequestDocument, AIResponseDocument
 
 logger = logging.getLogger("backend.ai.gateway")
@@ -113,14 +115,19 @@ class AIGateway:
                 await resp_doc.insert()
                 return resp_doc.model_dump()
 
-        # 4. Route through FallbackEngine
+        # 4. Route through FallbackEngine with CircuitBreaker, HealthManager, and RetryEngine
         async def execute_adapter(prov: str, mod: str) -> str:
-            # Lookup adapter class
+            from app.ai.resilience.circuit_breaker import circuit_breaker_registry
+            from app.ai.resilience.retry_engine import retry_engine
+            from app.ai.gateway.health_manager import provider_health_manager
+
+            if not circuit_breaker_registry.allow_request(prov):
+                raise RuntimeError(f"Circuit breaker for provider '{prov}' is OPEN. Requests blocked.")
+
             adapter_cls = ProviderRegistry.get_provider_class(prov)
             if not adapter_cls:
                 raise ValueError(f"Provider '{prov}' has no adapter registered in ProviderRegistry.")
             
-            # Setup base URL if OpenRouter/Ollama
             base_url = ""
             if prov == "openrouter":
                 base_url = "https://openrouter.ai/api/v1"
@@ -130,7 +137,22 @@ class AIGateway:
             from typing import Any
             adapter_cls_cast: Any = adapter_cls
             adapter_inst = adapter_cls_cast(model=mod, base_url=base_url)
-            return await adapter_inst.complete(prompt, system_prompt)
+
+            call_start = time.time()
+            try:
+                text = await retry_engine.execute_with_retry(
+                    func=lambda: adapter_inst.complete(prompt, system_prompt),
+                    provider=prov,
+                )
+                call_lat = round((time.time() - call_start) * 1000, 2)
+                circuit_breaker_registry.record_success(prov)
+                provider_health_manager.record_success(prov, call_lat)
+                return text
+            except Exception as call_err:
+                call_lat = round((time.time() - call_start) * 1000, 2)
+                circuit_breaker_registry.record_failure(prov, call_err)
+                provider_health_manager.record_failure(prov, call_err, call_lat)
+                raise call_err
 
         run_result = await fallback_engine.execute_with_fallback(
             primary_provider=provider,
@@ -324,6 +346,27 @@ class AIGateway:
         result["pii_detected"] = guardrail_result.pii_detected
 
         return result
+
+    async def execute_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        user_scopes: Optional[List[str]] = None,
+        correlation_id: str = "corr_gateway_tool",
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Executes an AI tool call exclusively through the sandboxed execution bridge.
+        Direct tool execution is forbidden.
+        """
+        logger.info(f"[AIGateway] Routing tool call '{tool_name}' through ToolSandbox...")
+        return await tool_sandbox.execute_tool(
+            tool_name=tool_name,
+            arguments=arguments,
+            user_scopes=user_scopes,
+            correlation_id=correlation_id,
+            user_id=user_id,
+        )
 
 
 # Global singleton instance

@@ -22,6 +22,14 @@ import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import SchedulerPage from "../pages/scheduler/SchedulerPage";
 import PluginMarketplacePage from "../pages/plugins/PluginMarketplacePage";
 import AIDashboardPage from "../pages/ai/AIDashboardPage";
+import CacheDashboard from "../pages/ai/CacheDashboard";
+import PromptWorkspace from "../pages/ai/PromptWorkspace";
+import ToolWorkspace from "../pages/ai/ToolWorkspace";
+import AgentWorkspace from "../pages/ai/AgentWorkspace";
+import ObservabilityWorkspace from "../pages/ai/ObservabilityWorkspace";
+import SecurityWorkspace from "../pages/ai/SecurityWorkspace";
+import AIPlaygroundWorkspace from "../pages/ai/AIPlaygroundWorkspace";
+import EmailWorkspace from "../pages/email/EmailWorkspace";
 import VoiceWorkspacePage from "../pages/voice/VoiceWorkspacePage";
 import VoiceAnalyticsDashboardPage from "../pages/voice/VoiceAnalyticsDashboardPage";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -63,6 +71,70 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <AIDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/cache"
+            element={
+              <ProtectedRoute>
+                <CacheDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/prompts"
+            element={
+              <ProtectedRoute>
+                <PromptWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/tools"
+            element={
+              <ProtectedRoute>
+                <ToolWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/agents-platform"
+            element={
+              <ProtectedRoute>
+                <AgentWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/observability"
+            element={
+              <ProtectedRoute>
+                <ObservabilityWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/security"
+            element={
+              <ProtectedRoute>
+                <SecurityWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/playground"
+            element={
+              <ProtectedRoute>
+                <AIPlaygroundWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/email/outreach"
+            element={
+              <ProtectedRoute>
+                <EmailWorkspace />
               </ProtectedRoute>
             }
           />

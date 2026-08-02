@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.openapi.utils import get_openapi
 from app.api.v1 import api_router
 from app.config.settings import settings
@@ -10,6 +10,7 @@ from app.database.mongodb.connection import DatabaseManager
 async def lifespan(app: FastAPI):
     """Lifecycle context manager handling MongoDB connections on startup and shutdown."""
     # Startup lifecycle hooks
+    settings.validate_api_keys()
     await DatabaseManager.initialize()
     yield
     # Shutdown lifecycle hooks
@@ -112,6 +113,12 @@ async def version():
     return {
         "version": settings.APP_VERSION,
     }
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Favicon endpoint returning 204 No Content."""
+    return Response(status_code=204)
 
 
 # Include unified API routing mapping

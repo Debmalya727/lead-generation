@@ -66,13 +66,14 @@ services:
     build:
       context: ./backend
       dockerfile: ../docker/backend/Dockerfile
-      network: host
     container_name: leadforge_backend
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "8000:8000"
     environment:
-      MONGODB_URL: mongodb://${MONGO_ROOT_USER:-leadforge}:${MONGO_ROOT_PASSWORD:-leadforge_password}@localhost:27017/${MONGO_DB_NAME:-leadforge_db}?authSource=admin
-      REDIS_URL: redis://localhost:6379/0
+      PYTHONPATH: /app
+      MONGODB_URL: mongodb://${MONGO_ROOT_USER:-leadforge}:${MONGO_ROOT_PASSWORD:-leadforge_password}@mongodb:27017/${MONGO_DB_NAME:-leadforge_db}?authSource=admin
+      REDIS_URL: redis://redis:6379/0
       ENV: development
       DEBUG: "true"
     depends_on:
@@ -80,6 +81,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - leadforge_network
     volumes:
       - ./backend:/app
       - ./backend/uploads:/app/uploads
@@ -98,14 +101,13 @@ services:
     build:
       context: ./backend
       dockerfile: ../docker/backend/Dockerfile
-      network: host
     container_name: leadforge_celery_worker
     restart: unless-stopped
-    network_mode: host
-    command: celery -A app.tasks.worker worker --loglevel=info
+    command: celery -A app.tasks.worker.celery_app worker --loglevel=info
     environment:
-      MONGODB_URL: mongodb://${MONGO_ROOT_USER:-leadforge}:${MONGO_ROOT_PASSWORD:-leadforge_password}@localhost:27017/${MONGO_DB_NAME:-leadforge_db}?authSource=admin
-      REDIS_URL: redis://localhost:6379/0
+      PYTHONPATH: /app
+      MONGODB_URL: mongodb://${MONGO_ROOT_USER:-leadforge}:${MONGO_ROOT_PASSWORD:-leadforge_password}@mongodb:27017/${MONGO_DB_NAME:-leadforge_db}?authSource=admin
+      REDIS_URL: redis://redis:6379/0
       ENV: development
     depends_on:
       mongodb:
@@ -114,10 +116,12 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
+    networks:
+      - leadforge_network
     volumes:
       - ./backend:/app
     healthcheck:
-      test: ["CMD-SHELL", "celery -A app.tasks.worker inspect ping || exit 1"]
+      test: ["CMD-SHELL", "celery -A app.tasks.worker.celery_app inspect ping || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -128,7 +132,6 @@ services:
       context: ./frontend
       dockerfile: ../docker/frontend/Dockerfile
       target: development
-      network: host
     container_name: leadforge_frontend
     restart: unless-stopped
     ports:

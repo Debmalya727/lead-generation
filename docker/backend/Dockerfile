@@ -3,6 +3,7 @@ FROM python:3.12-slim-bookworm
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app

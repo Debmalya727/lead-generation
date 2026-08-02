@@ -60,6 +60,10 @@ pnpm-debug.log*
 Thumbs.db
 
 # Database / Storage
+scratch/
+storage/
+backend/storage/
+backend/storage/*
 database/data/
 database/mongo/backup/*
 !database/mongo/backup/.gitkeep

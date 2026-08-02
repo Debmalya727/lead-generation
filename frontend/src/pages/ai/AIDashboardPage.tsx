@@ -135,7 +135,7 @@ export const AIDashboardPage: React.FC = () => {
   const [guardrailLogs, setGuardrailLogs] = useState<any[]>([]);
   const [evaluations, setEvaluations] = useState<any[]>([]);
   const [memoryRecords, setMemoryRecords] = useState<any[]>([]);
-  const [memoryArtifacts, setMemoryArtifacts] = useState<any[]>([]);
+  const [_memoryArtifacts, setMemoryArtifacts] = useState<any[]>([]);
 
   // Phase 12.7C state
   const [pipelineTemplates, setPipelineTemplates] = useState<any[]>([]);
