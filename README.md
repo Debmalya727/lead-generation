@@ -1,4 +1,8 @@
+
 # 🚀 LeadForgeAI
+
+live deployment link : https://armchair-manly-landlady.ngrok-free.dev
+
 **Autonomous Multi-Agent Sales Intelligence & B2B Prospecting Platform**
 
 LeadForgeAI is an enterprise-grade AI sales intelligence platform designed to completely automate and replace manual, tedious B2B prospecting. By deploying a team of autonomous AI agents, it discovers leads, audits their web presence, scores their potential, and writes highly personalized outreach campaigns.
