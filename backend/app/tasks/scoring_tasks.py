@@ -102,7 +102,7 @@ async def async_run_scoring(doc_id: str) -> None:
         await scoring_repo.update(doc, {"progress": 70.0})
 
         # Stage 6: LLM reasoning call (85%)
-        llm = get_llm_provider()
+        llm = get_llm_provider("lead_scorer")
         logger.info(f"Calling LLM ({type(llm).__name__}) for scoring reasoning on '{fv.company_name}'")
         raw_response = await llm.complete(prompt=prompt, system_prompt=system_prompt)
         await scoring_repo.update(doc, {"progress": 85.0})

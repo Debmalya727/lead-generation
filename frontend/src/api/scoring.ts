@@ -59,9 +59,16 @@ export const scoringApi = {
     return res.data;
   },
 
-  getByLead: async (leadId: string): Promise<ScoringResponse> => {
-    const res = await axiosClient.get(`/scoring/${leadId}`);
-    return res.data;
+  getByLead: async (leadId: string): Promise<ScoringResponse | null> => {
+    try {
+      const res = await axiosClient.get(`/scoring/${leadId}`);
+      return res.data;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw err;
+    }
   },
 
   deleteScore: async (leadId: string): Promise<void> => {

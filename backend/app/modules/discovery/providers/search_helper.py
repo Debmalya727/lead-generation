@@ -4,6 +4,8 @@ import logging
 import urllib.parse
 from typing import List
 
+from app.utils.domain_utils import is_directory_domain
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -131,8 +133,12 @@ def _process_and_add_lead(title, snippet, href, clean_location, provider_name, w
         email = email_match.group(0).strip()
 
     website = ""
-    if href and not any(x in href.lower() for x in ['facebook.com', 'instagram.com', 'wikipedia.org', 'youtube.com', 'twitter.com', 'duckduckgo.com']):
-        website = href
+    directory_url = ""
+    if href:
+        if is_directory_domain(href):
+            directory_url = href
+        else:
+            website = href
 
     if website_filter == "without_website" and website:
         website = ""

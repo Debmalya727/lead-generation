@@ -56,9 +56,16 @@ export const intelligenceApi = {
     return res.data;
   },
 
-  getByLead: async (leadId: string): Promise<IntelligenceResponse> => {
-    const res = await axiosClient.get<IntelligenceResponse>(`/intelligence/${leadId}`);
-    return res.data;
+  getByLead: async (leadId: string): Promise<IntelligenceResponse | null> => {
+    try {
+      const res = await axiosClient.get<IntelligenceResponse>(`/intelligence/${leadId}`);
+      return res.data;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw err;
+    }
   },
 
   deleteIntelligence: async (leadId: string): Promise<{ status: string; message: string }> => {

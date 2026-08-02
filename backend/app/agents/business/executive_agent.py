@@ -50,7 +50,7 @@ class ExecutiveAgent(BaseAgent):
 
     def __init__(self):
         super().__init__()
-        self.llm_provider = get_llm_provider()
+        self.llm_provider = get_llm_provider("manager")
 
     async def execute(self, context: ExecutionContext) -> AgentResult:
         """Synthesize all agent outputs into a final executive report."""
@@ -144,17 +144,16 @@ class ExecutiveAgent(BaseAgent):
         report_id = f"rpt_{uuid.uuid4().hex[:12]}"
         try:
             from app.database.mongodb.collections.executive_report import ExecutiveReport
-            from bson import ObjectId
+            from beanie import PydanticObjectId
 
-            try:
-                o_id = ObjectId(owner_id)
-            except Exception:
-                o_id = owner_id
+            l_id = None
+            if lead_id and PydanticObjectId.is_valid(str(lead_id)):
+                l_id = PydanticObjectId(str(lead_id))
 
-            try:
-                l_id = ObjectId(lead_id) if lead_id else None
-            except Exception:
-                l_id = lead_id
+            if owner_id and PydanticObjectId.is_valid(str(owner_id)):
+                o_id = PydanticObjectId(str(owner_id))
+            else:
+                o_id = PydanticObjectId()
 
             report = ExecutiveReport(
                 report_id=report_id,

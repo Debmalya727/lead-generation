@@ -49,6 +49,8 @@ class AgentRegistry:
             "app.agents.business.outreach_agent",
             "app.agents.business.review_agent",
             "app.agents.business.executive_agent",
+            "app.agents.scraper.scraper_agent",
+            "app.agents.website_analyzer.analyzer_agent",
         ]
         for module_path in modules_to_discover:
             try:

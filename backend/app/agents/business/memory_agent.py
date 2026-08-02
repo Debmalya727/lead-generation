@@ -49,7 +49,7 @@ class MemoryAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.shared_memory = SharedMemory()
-        self.llm_provider = get_llm_provider()
+        self.llm_provider = get_llm_provider("memory")
 
     async def execute(self, context: ExecutionContext) -> AgentResult:
         """Retrieve comprehensive lead memory using vector search and RAG."""

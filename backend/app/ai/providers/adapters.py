@@ -151,10 +151,22 @@ class AzureOpenAIAdapter(BaseAdapter):
 
 
 class OllamaAdapter(BaseAdapter):
-    """Adapter for local Ollama container or instance."""
+    """Adapter for local Ollama container or remote Ollama Cloud instance."""
 
     async def complete(self, prompt: str, system_prompt: str = "") -> str:
-        url = f"{self.base_url or 'http://localhost:11434'}/api/chat"
+        base_url = (
+            self.base_url
+            or os.getenv("OLLAMA_BASE_URL", "")
+            or os.getenv("OLLAMA_HOST", "")
+            or "http://localhost:11434"
+        ).rstrip("/")
+
+        api_key = self.api_key or os.getenv("OLLAMA_API_KEY", "")
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        url = f"{base_url}/api/chat"
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -168,7 +180,7 @@ class OllamaAdapter(BaseAdapter):
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            res = await client.post(url, json=payload)
+            res = await client.post(url, headers=headers, json=payload)
             res.raise_for_status()
             data = res.json()
             return data["message"]["content"]
@@ -182,6 +194,13 @@ class OpenRouterAdapter(BaseAdapter):
         if not api_key:
             raise ValueError("Missing OpenRouter API Key")
 
+        model_name = self.model or "openrouter/auto"
+        # Normalize model aliases for OpenRouter
+        if "nemotron" in model_name.lower():
+            model_name = "nvidia/llama-3.1-nemotron-70b-instruct:free"
+        elif model_name.lower() in ("openrouter/free", "free"):
+            model_name = "openrouter/auto"
+
         url = f"{self.base_url or 'https://openrouter.ai/api/v1'}/chat/completions"
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -194,7 +213,7 @@ class OpenRouterAdapter(BaseAdapter):
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": self.model or "openrouter-default",
+            "model": model_name,
             "messages": messages,
             "temperature": 0.2
         }
@@ -214,6 +233,13 @@ class GroqAdapter(BaseAdapter):
         if not api_key:
             raise ValueError("Missing GROQ_API_KEY")
 
+        model_name = self.model or "llama-3.3-70b-versatile"
+        # Map shorthand model aliases to exact Groq API model strings
+        if model_name.lower() in ("llama-3.3-70b", "llama3.3-70b", "llama3.3", "gpt-oss-20b"):
+            model_name = "llama-3.3-70b-versatile"
+        elif model_name.lower() in ("llama3-8b", "qwen3.5", "qwen3:4b"):
+            model_name = "llama3-8b-8192"
+
         url = f"{self.base_url or 'https://api.groq.com/openai/v1'}/chat/completions"
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -225,7 +251,7 @@ class GroqAdapter(BaseAdapter):
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": self.model or "mixtral-8x7b-32768",
+            "model": model_name,
             "messages": messages,
             "temperature": 0.2
         }
@@ -322,6 +348,38 @@ class VLLMAdapter(BaseAdapter):
             return data["choices"][0]["message"]["content"]
 
 
+class HuggingFaceAdapter(BaseAdapter):
+    """Adapter for Hugging Face Inference API / Router."""
+
+    async def complete(self, prompt: str, system_prompt: str = "") -> str:
+        api_key = self.api_key or os.getenv("HUGGINGFACE_API_KEY", "") or os.getenv("HF_TOKEN", "")
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        url = self.base_url or "https://router.huggingface.co/hf-inference/v1/chat/completions"
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "model": self.model or "google/gemma-3-12b-it",
+            "messages": messages,
+            "temperature": 0.2
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.post(url, headers=headers, json=payload)
+            res.raise_for_status()
+            data = res.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                return data["choices"][0]["message"]["content"]
+            elif isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
+                return data[0]["generated_text"]
+            return json.dumps(data)
+
+
 # Register all adapters dynamically into the ProviderRegistry
 ProviderRegistry.register_provider("gemini", GeminiAdapter)
 ProviderRegistry.register_provider("openai", OpenAIAdapter)
@@ -333,3 +391,6 @@ ProviderRegistry.register_provider("groq", GroqAdapter)
 ProviderRegistry.register_provider("mistral", MistralAdapter)
 ProviderRegistry.register_provider("deepseek", DeepSeekAdapter)
 ProviderRegistry.register_provider("vllm", VLLMAdapter)
+ProviderRegistry.register_provider("huggingface", HuggingFaceAdapter)
+ProviderRegistry.register_provider("hf", HuggingFaceAdapter)
+

@@ -97,3 +97,21 @@ Our agent ecosystem communicates asynchronously, passing state payload contexts 
 - **Memory**: History of successful conversions vector cache.
 - **Tools**: Prompt template interpolator, Resend dispatcher client.
 - **System Prompt**: *"You are the LeadForgeAI Outreach Copywriter. Craft compelling, personalized outreach messages referencing the target's specific website gaps."*
+
+---
+
+## 3. Multi-Agent LLM Routing Architecture
+
+The lead discovery & analysis pipeline routes agent tasks across specialized LLM models and providers to maximize reasoning power, execution speed, and cost efficiency:
+
+| Agent | Provider | Model | Why / Role |
+| --- | --- | --- | --- |
+| 🧠 **Manager** | OpenRouter | **NVIDIA Nemotron 3 Ultra (free)** | Strong reasoning & high-level multi-agent orchestration |
+| 📋 **Planner** | Groq | **GPT-OSS 20B** | Ultra-fast DAG planning & tool call decision routing |
+| 🕷️ **Scraper** | Ollama | **Qwen3 4B/8B** | Local + free, structured lead directory extraction |
+| 🔎 **Research** | Groq | **Llama 3.3 70B** | Deep context enrichment, decision-maker & buying signal reasoning |
+| 🌐 **Website Analyzer** | Ollama / HF | **Gemma 3 12B** | Content analysis, vision-capable landing page & conversion gap audit |
+| 🛟 **Fallback** | OpenRouter | **openrouter/free** | Automatic failover routing to active free models when primary APIs fail |
+
+---
+

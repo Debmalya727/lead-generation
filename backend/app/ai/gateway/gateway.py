@@ -120,16 +120,25 @@ class AIGateway:
             if not adapter_cls:
                 raise ValueError(f"Provider '{prov}' has no adapter registered in ProviderRegistry.")
             
-            # Setup base URL if OpenRouter/Ollama
+            # Setup base URL & API Key for providers
             base_url = ""
+            api_key = ""
             if prov == "openrouter":
                 base_url = "https://openrouter.ai/api/v1"
+                api_key = os.getenv("OPENROUTER_API_KEY", os.getenv("LLM_API_KEY", "")).strip()
+            elif prov == "groq":
+                api_key = os.getenv("GROQ_API_KEY", "").strip()
             elif prov == "ollama":
-                base_url = "http://localhost:11434"
+                base_url = os.getenv("OLLAMA_BASE_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434")).strip()
+                api_key = os.getenv("OLLAMA_API_KEY", "").strip()
+            elif prov == "gemini":
+                api_key = os.getenv("GEMINI_API_KEY", "").strip()
+            elif prov == "openai":
+                api_key = os.getenv("OPENAI_API_KEY", "").strip()
             
             from typing import Any
             adapter_cls_cast: Any = adapter_cls
-            adapter_inst = adapter_cls_cast(model=mod, base_url=base_url)
+            adapter_inst = adapter_cls_cast(api_key=api_key, model=mod, base_url=base_url)
             return await adapter_inst.complete(prompt, system_prompt)
 
         run_result = await fallback_engine.execute_with_fallback(

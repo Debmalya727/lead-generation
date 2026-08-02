@@ -23,7 +23,7 @@ class PlannerEngine:
     """Planner constructing DAG ExecutionPlans from natural language goals."""
 
     def __init__(self):
-        self.llm_provider = get_llm_provider()
+        self.llm_provider = get_llm_provider("planner")
 
     async def create_plan(self, goal: str, lead_id: Optional[str] = None) -> ExecutionPlan:
         """Construct DAG ExecutionPlan for natural language goal."""

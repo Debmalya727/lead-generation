@@ -122,6 +122,7 @@ class WebsiteCrawler:
                     "--disable-dev-shm-usage",
                     "--disable-gpu",
                     "--disable-extensions",
+                    "--disable-blink-features=AutomationControlled",
                 ]
             )
             try:
@@ -129,13 +130,30 @@ class WebsiteCrawler:
                     user_agent=(
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                         "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/120.0.0.0 Safari/537.36"
+                        "Chrome/122.0.0.0 Safari/537.36"
                     ),
+                    extra_http_headers={
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                        "Sec-Ch-Ua-Mobile": "?0",
+                        "Sec-Ch-Ua-Platform": '"Windows"',
+                        "Sec-Fetch-Dest": "document",
+                        "Sec-Fetch-Mode": "navigate",
+                        "Sec-Fetch-Site": "none",
+                        "Sec-Fetch-User": "?1",
+                        "Upgrade-Insecure-Requests": "1",
+                    },
                     ignore_https_errors=True,
                 )
                 page = await context.new_page()
 
-                # Block unnecessary resources to speed up crawl
+                # Anti-bot stealth init script
+                await page.add_init_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                )
+
+                # Block unnecessary media resources to speed up crawl
                 await page.route(
                     "**/*.{png,jpg,jpeg,gif,webp,svg,ico,woff,woff2,ttf,eot}",
                     lambda r: r.abort()
@@ -165,6 +183,16 @@ class WebsiteCrawler:
                 # Extract clean text (remove scripts, styles, nav, footer)
                 result.text_content = self._extract_text(soup)
 
+                # Detect WAF / Anti-Bot block pages (e.g. Akamai 'Access Denied', Cloudflare 403)
+                block_keywords = ["access denied", "403 forbidden", "cloudflare", "attention required", "robot or human", "captcha"]
+                text_lower = result.text_content.lower()
+                if len(result.text_content) < 300 or any(kw in text_lower for kw in block_keywords):
+                    logger.warning(f"Anti-bot/WAF block detected for {url} (Title: '{result.title}'). Flagging for search engine fallback.")
+                    result.success = False
+                    result.error = f"Anti-bot WAF block on website ({result.title or 'Access Denied'})."
+                else:
+                    result.success = True
+
                 # Detect tech stack
                 result.tech_stack = self._detect_tech_stack(raw_html)
 
@@ -176,8 +204,7 @@ class WebsiteCrawler:
                 result.careers_page = self._find_page(all_links, ["careers", "jobs", "work-with-us", "hiring", "join"])
                 result.about_page = self._find_page(all_links, ["about", "team", "who-we-are", "our-story", "company"])
 
-                result.success = True
-                logger.info(f"Successfully crawled {url}. Text length: {len(result.text_content)} chars")
+                logger.info(f"Crawl completed for {url}. Success={result.success}, Text length: {len(result.text_content)} chars")
 
             finally:
                 await browser.close()

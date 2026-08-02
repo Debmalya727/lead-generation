@@ -73,7 +73,7 @@ class AICache:
             doc = await AIResponseDocument.find_one(
                 AIResponseDocument.correlation_id == f"cached_{key}"
             )
-            if doc:
+            if doc and doc.response_text and "Mock fallback" not in doc.response_text and "all providers down" not in doc.response_text:
                 logger.info(f"AICache: MongoDB hit for prompt response")
                 # Write back to Redis/Memory
                 self.set_response(prompt, doc.response_text, system_prompt, model)
@@ -85,6 +85,11 @@ class AICache:
 
     def set_response(self, prompt: str, response: str, system_prompt: str = "", model: str = "", ttl_seconds: int = 3600) -> None:
         """Cache response for a prompt."""
+        # Do NOT cache mock fallback or error responses
+        if not response or "Mock fallback" in response or "all providers down" in response:
+            logger.info("AICache: Skipping caching of mock/fallback response")
+            return
+
         key = f"response:{self._get_hash(prompt + system_prompt + model)}"
         
         # 1. Save in Redis
